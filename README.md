@@ -55,9 +55,11 @@ You can use `content/schema.json` to validate your file if your editor supports 
 
 1. **Fork** this repository
 2. Add your topic JSON file to `content/topics/`
-3. Open a **Pull Request** with a short description of what you've added or changed
+3. Open a **Pull Request** targeting the **`dev` branch** with a short description of what you've added or changed
 
 That's it. Someone will review it, give feedback if needed, and merge it in.
+
+> **Note:** All pull requests must target the `dev` branch, not `main`. The `dev` branch is where contributions are reviewed and tested before being released. You don't need to interact with `main` — releases are handled by the repository owner.
 
 ---
 
