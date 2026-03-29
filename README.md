@@ -34,7 +34,6 @@ If you're comfortable with JSON, you can write your topic file directly. Each fi
   "id": "your-topic-id",
   "title": "Your Topic Title",
   "description": "A short description of what this topic covers.",
-  "author": "your-github-username",
   "concepts": [
     {
       "title": "Concept Name",
@@ -64,7 +63,7 @@ That's it. Someone will review it, give feedback if needed, and merge it in.
 
 ## Attribution
 
-If you'd like credit for your contribution, include your GitHub username in the `author` field of your topic file (as shown in the example above). It's optional — leave it out if you'd prefer to contribute anonymously.
+Contributions are attributed through git history and Pull Requests. Your GitHub profile is naturally linked to any PR you open, so there is no need to include personal details in the content files themselves.
 
 ---
 
