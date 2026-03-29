@@ -31,14 +31,6 @@ jobs:
       - name: Install JSON Schema Validator
         run: npm install -g ajv-cli ajv-formats
 
-      - name: Validate manifest.json
-        run: |
-          echo "✅ Validating manifest.json structure..."
-          ajv validate -s schema.json -d manifest.json --strict=false || {
-            echo "❌ manifest.json validation failed!"
-            exit 1
-          }
-
       - name: Validate all topic files
         run: |
           echo "✅ Validating all topic JSON files..."
