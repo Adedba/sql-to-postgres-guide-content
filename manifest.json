@@ -10,7 +10,7 @@
       "file": "topics/backup-recovery.json"
     },
     {
-      "id": "database-management",
+      "id": "database_management",
       "title": "Database Management",
       "description": "Core database operations, creation, and configuration",
       "conceptCount": 2,
@@ -24,7 +24,7 @@
       "file": "topics/docker-setup.json"
     },
     {
-      "id": "platform-fundamentals",
+      "id": "platform_fundamentals",
       "title": "Platform Fundamentals",
       "description": "Installation, management tools, versions, and support models",
       "conceptCount": 4,

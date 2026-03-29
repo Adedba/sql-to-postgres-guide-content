@@ -1,5 +1,5 @@
 {
-  "id": "database-management",
+  "id": "database_management",
   "title": "Database Management",
   "description": "Core database operations, creation, and configuration",
   "concepts": [

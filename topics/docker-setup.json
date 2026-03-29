@@ -1,5 +1,5 @@
 {
-  "id": "docker-setup",
+  "id": "docker_setup",
   "title": "Docker Setup for PostgreSQL",
   "description": "Complete guide to setting up PostgreSQL using Docker on Windows - includes both Docker Desktop and Hyper-V alternatives",
   "concepts": [
