@@ -7,77 +7,77 @@
       "title": "Backup & Recovery",
       "description": "Backup strategies, restore operations, and recovery models",
       "conceptCount": 4,
-      "file": "topics/backup-recovery.json"
+      "file": "topics/backup_recovery.json"
     },
     {
       "id": "database_management",
       "title": "Database Management",
       "description": "Core database operations, creation, and configuration",
       "conceptCount": 2,
-      "file": "topics/database-management.json"
+      "file": "topics/database_management.json"
     },
     {
       "id": "docker_setup",
       "title": "Docker Setup for PostgreSQL",
       "description": "Complete guide to setting up PostgreSQL using Docker on Windows - includes both Docker Desktop and Hyper-V alternatives",
       "conceptCount": 8,
-      "file": "topics/docker-setup.json"
+      "file": "topics/docker_setup.json"
     },
     {
       "id": "platform_fundamentals",
       "title": "Platform Fundamentals",
       "description": "Installation, management tools, versions, and support models",
       "conceptCount": 4,
-      "file": "topics/platform-fundamentals.json"
+      "file": "topics/platform_fundamentals.json"
     },
     {
       "id": "security_access_control",
       "title": "Security & Access Control",
       "description": "User management, roles, permissions, and security best practices",
       "conceptCount": 2,
-      "file": "topics/security-access-control.json"
+      "file": "topics/security_access_control.json"
     },
     {
       "id": "stored_procedures",
       "title": "Stored Procedures and Functions",
       "description": "Creating and calling stored procedures, user-defined functions, and output parameters",
       "conceptCount": 4,
-      "file": "topics/stored-procedures.json"
+      "file": "topics/stored_procedures.json"
     },
     {
       "id": "transactions_locking",
       "title": "Transactions and Locking",
       "description": "Transaction control, isolation levels, locking behavior, and deadlock handling",
       "conceptCount": 4,
-      "file": "topics/transactions-locking.json"
+      "file": "topics/transactions_locking.json"
     },
     {
       "id": "string_functions",
       "title": "String Functions",
       "description": "Common string manipulation functions: searching, splitting, formatting, and pattern matching",
       "conceptCount": 4,
-      "file": "topics/string-functions.json"
+      "file": "topics/string_functions.json"
     },
     {
       "id": "window_functions",
       "title": "Window Functions",
       "description": "Ranking, aggregate, and value window functions with OVER, PARTITION BY, and frame specifications",
       "conceptCount": 4,
-      "file": "topics/window-functions.json"
+      "file": "topics/window_functions.json"
     },
     {
       "id": "instance_resource_configuration",
       "title": "Instance Resource Configuration",
       "description": "Managing server memory allocation and parallelism settings for database instances",
       "conceptCount": 2,
-      "file": "topics/server-memory.json"
+      "file": "topics/server_memory.json"
     },
     {
       "id": "error_handling",
       "title": "Error Handling",
       "description": "Structured error handling, custom errors, and error information functions",
       "conceptCount": 3,
-      "file": "topics/error-handling.json"
+      "file": "topics/error_handling.json"
     }
   ]
 }

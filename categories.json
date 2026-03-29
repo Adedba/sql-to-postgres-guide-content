@@ -2,22 +2,22 @@
   {
     "id": "fundamentals",
     "name": "Platform Fundamentals",
-    "icon": "\ud83c\udfd7\ufe0f",
+    "icon": "🏗️",
     "color": "#3b82f6",
     "description": "Core concepts, installation, architecture, and version management",
     "topics": [
       {
-        "id": "platform-fundamentals",
+        "id": "platform_fundamentals",
         "name": "Platform Fundamentals",
-        "file": "platform-fundamentals.json",
+        "file": "platform_fundamentals.json",
         "conceptCount": 4,
         "description": "Installation, management tools, versions, and support models",
         "keywords": ["installation", "setup", "ide", "management", "tools", "versions", "support", "ssms", "pgadmin"]
       },
       {
-        "id": "docker-setup",
+        "id": "docker_setup",
         "name": "Docker Setup for PostgreSQL",
-        "file": "docker-setup.json",
+        "file": "docker_setup.json",
         "conceptCount": 8,
         "description": "Complete guide to setting up PostgreSQL using Docker on Windows",
         "keywords": ["docker", "setup", "installation", "container", "wsl2", "hyper-v", "volumes", "persistence", "pgadmin", "compose"]
@@ -27,14 +27,14 @@
   {
     "id": "database",
     "name": "Database Management",
-    "icon": "\ud83d\uddc4\ufe0f",
+    "icon": "🗄️",
     "color": "#8b5cf6",
     "description": "Creating, configuring, and maintaining databases",
     "topics": [
       {
-        "id": "database-management",
+        "id": "database_management",
         "name": "Database Creation & Configuration",
-        "file": "database-management.json",
+        "file": "database_management.json",
         "conceptCount": 2,
         "description": "Core database operations, creation, and configuration",
         "keywords": ["database", "create", "configuration", "settings", "templates", "encoding", "collation"]
@@ -42,7 +42,7 @@
       {
         "id": "transactions_locking",
         "name": "Transactions and Locking",
-        "file": "transactions-locking.json",
+        "file": "transactions_locking.json",
         "conceptCount": 4,
         "addedDate": "2026-03-26",
         "description": "Transaction control, isolation levels, locking behavior, and deadlock handling",
@@ -53,14 +53,14 @@
   {
     "id": "backup",
     "name": "Backup & Recovery",
-    "icon": "\ud83d\udcbe",
+    "icon": "💾",
     "color": "#10b981",
     "description": "Backup strategies, restore operations, and disaster recovery",
     "topics": [
       {
-        "id": "backup-recovery",
+        "id": "backup_recovery",
         "name": "Backup & Recovery Strategies",
-        "file": "backup-recovery.json",
+        "file": "backup_recovery.json",
         "conceptCount": 4,
         "description": "Backup strategies, restore operations, and recovery models",
         "keywords": ["backup", "restore", "recovery", "pg_dump", "wal", "transaction log", "pitr", "point in time"]
@@ -70,14 +70,14 @@
   {
     "id": "security",
     "name": "Security & Access",
-    "icon": "\ud83d\udd10",
+    "icon": "🔐",
     "color": "#f59e0b",
     "description": "User management, roles, permissions, and security best practices",
     "topics": [
       {
-        "id": "security-access-control",
+        "id": "security_access_control",
         "name": "Security & Access Control",
-        "file": "security-access-control.json",
+        "file": "security_access_control.json",
         "conceptCount": 2,
         "description": "Authentication, authorization, users, roles, and security features",
         "keywords": ["security", "authentication", "authorization", "users", "roles", "logins", "permissions", "rls"]
@@ -87,14 +87,14 @@
   {
     "id": "programmability",
     "name": "Programmability",
-    "icon": "\ud83d\udccb",
+    "icon": "📋",
     "color": "#3b82f6",
     "description": "Creating and calling stored procedures, user-defined functions, and output parameters",
     "topics": [
       {
         "id": "stored_procedures",
         "name": "Stored Procedures and Functions",
-        "file": "stored-procedures.json",
+        "file": "stored_procedures.json",
         "conceptCount": 4,
         "description": "Creating and calling stored procedures, user-defined functions, and output parameters",
         "keywords": ["stored procedure", "function", "create procedure", "plpgsql", "udf", "output parameters", "table-valued function", "scalar function", "return value", "programmability"]
@@ -102,7 +102,7 @@
       {
         "id": "error_handling",
         "name": "Error Handling",
-        "file": "error-handling.json",
+        "file": "error_handling.json",
         "conceptCount": 3,
         "addedDate": "2026-03-27",
         "description": "Structured error handling, custom errors, and error information functions",
@@ -113,14 +113,14 @@
   {
     "id": "query_techniques",
     "name": "Query Techniques",
-    "icon": "\ud83d\udccb",
+    "icon": "📋",
     "color": "#3b82f6",
     "description": "Common string manipulation functions: searching, splitting, formatting, and pattern matching",
     "topics": [
       {
         "id": "string_functions",
         "name": "String Functions",
-        "file": "string-functions.json",
+        "file": "string_functions.json",
         "conceptCount": 4,
         "addedDate": "2026-03-26",
         "description": "Common string manipulation functions: searching, splitting, formatting, and pattern matching",
@@ -129,7 +129,7 @@
       {
         "id": "window_functions",
         "name": "Window Functions",
-        "file": "window-functions.json",
+        "file": "window_functions.json",
         "conceptCount": 4,
         "addedDate": "2026-03-26",
         "description": "Ranking, aggregate, and value window functions with OVER, PARTITION BY, and frame specifications",
@@ -140,14 +140,14 @@
   {
     "id": "performance",
     "name": "Performance & Optimization",
-    "icon": "\ud83d\udccb",
+    "icon": "📋",
     "color": "#3b82f6",
     "description": "Managing server memory allocation and parallelism settings for database instances",
     "topics": [
       {
         "id": "instance_resource_configuration",
         "name": "Instance Resource Configuration",
-        "file": "server-memory.json",
+        "file": "server_memory.json",
         "conceptCount": 2,
         "addedDate": "2026-03-27",
         "description": "Managing server memory allocation and parallelism settings for database instances",
