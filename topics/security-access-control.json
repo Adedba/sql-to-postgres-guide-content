@@ -1,0 +1,39 @@
+{
+  "id": "security_access_control",
+  "title": "Security & Access Control",
+  "description": "User management, roles, permissions, and security best practices",
+  "concepts": [
+    {
+      "id": "user_role_management",
+      "title": "User & Role Management",
+      "sqlServer": {
+        "code": "-- Create Login (Server Level)\nCREATE LOGIN [john_doe] WITH PASSWORD = 'SecurePassword123!';\n\n-- Create User (Database Level)\nUSE AdventureWorks2019;\nCREATE USER [john_doe] FOR LOGIN [john_doe];\n\n-- Create Database Role\nCREATE ROLE db_reports;\n\n-- Add User to Role\nALTER ROLE db_reports ADD MEMBER [john_doe];",
+        "description": "SQL Server uses a two-tier security model: Logins at server level and Users at database level. Logins are server-wide, users are database-specific. Must create both login and user for database access. Windows authentication preferred when possible.",
+        "notes": []
+      },
+      "postgres": {
+        "code": "-- Create Role (User and Role are the same concept)\nCREATE ROLE john_doe WITH LOGIN PASSWORD 'SecurePassword123!';\n\n-- Create Group Role\nCREATE ROLE db_reports;\n\n-- Grant membership\nGRANT db_reports TO john_doe;\n\n-- Alternative: Create user directly\nCREATE USER jane_smith WITH PASSWORD 'AnotherSecurePassword!';",
+        "description": "PostgreSQL unifies users and roles into a single concept - roles can have login capability. CREATE USER is shorthand for CREATE ROLE WITH LOGIN. Roles without LOGIN act as groups. Use pg_hba.conf for authentication methods.",
+        "keyDifferences": [],
+        "notes": []
+      },
+      "keyDifference": "No separate login/user distinction - roles handle both. Roles can be granted to other roles (inheritance). LOGIN attribute determines if role can connect."
+    },
+    {
+      "id": "permissions_privileges",
+      "title": "Permissions & Privileges",
+      "sqlServer": {
+        "code": "-- Grant permissions on schema objects\nGRANT SELECT, INSERT ON dbo.Customers TO [john_doe];\nGRANT EXECUTE ON dbo.GetCustomerById TO db_reports;\n\n-- Schema-level permissions\nGRANT SELECT ON SCHEMA::Sales TO db_reports;\n\n-- Database-level permissions\nGRANT CREATE TABLE TO [john_doe];\n\n-- View permissions\nSELECT\n    p.permission_name,\n    p.state_desc,\n    pr.name AS principal_name,\n    o.name AS object_name\nFROM sys.database_permissions p\nJOIN sys.objects o ON p.major_id = o.object_id\nJOIN sys.database_principals pr ON p.grantee_principal_id = pr.principal_id;",
+        "description": "SQL Server uses explicit permission grants on objects with hierarchical inheritance. Permissions can be granted at multiple levels. Schema permissions apply to all objects in schema. Use DENY to explicitly block permissions.",
+        "notes": []
+      },
+      "postgres": {
+        "code": "-- Grant table privileges\nGRANT SELECT, INSERT ON customers TO john_doe;\nGRANT EXECUTE ON FUNCTION get_customer_by_id(int) TO db_reports;\n\n-- Schema-level privileges\nGRANT USAGE ON SCHEMA sales TO db_reports;\nGRANT SELECT ON ALL TABLES IN SCHEMA sales TO db_reports;\n\n-- Database-level privileges\nGRANT CREATE ON DATABASE adventureworks TO john_doe;\n\n-- View privileges\nSELECT\n    grantee,\n    table_schema,\n    table_name,\n    privilege_type\nFROM information_schema.table_privileges\nWHERE grantee = 'john_doe';",
+        "description": "PostgreSQL uses a similar privilege system but with different syntax and some additional capabilities. Default privileges can be set for future objects. Row Level Security (RLS) available for fine-grained control. Use \\dp in psql to view table privileges.",
+        "keyDifferences": [],
+        "notes": []
+      },
+      "keyDifference": "Uses PRIVILEGES instead of PERMISSIONS. Can grant on ALL TABLES/FUNCTIONS in schema. USAGE privilege required on schemas before accessing objects."
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "id": "database-management",
+  "title": "Database Management",
+  "description": "Core database operations, creation, and configuration",
+  "concepts": [
+    {
+      "id": "creating_databases",
+      "title": "Creating Databases",
+      "sqlServer": {
+        "code": "-- Basic database creation\nCREATE DATABASE SampleDB;\n\n-- Database with custom settings\nCREATE DATABASE SampleDB_Custom\nON\n( NAME = 'SampleDB_Data',\n  FILENAME = 'C:\\Data\\SampleDB.mdf',\n  SIZE = 100MB,\n  MAXSIZE = 1GB,\n  FILEGROWTH = 10MB )\nLOG ON\n( NAME = 'SampleDB_Log',\n  FILENAME = 'C:\\Logs\\SampleDB.ldf',\n  SIZE = 10MB,\n  FILEGROWTH = 10% );\n\n-- Database with collation\nCREATE DATABASE SampleDB_Collated\nCOLLATE SQL_Latin1_General_CP1_CI_AS;\n\n-- Drop database\nDROP DATABASE SampleDB;",
+        "description": "SQL Server database creation involves specifying file locations, initial sizes, and growth settings. Collation is set at database level. Explicit file path specification required with separate data and log file configuration.",
+        "notes": []
+      },
+      "postgres": {
+        "code": "-- Basic database creation\nCREATE DATABASE sampledb;\n\n-- Database with template and encoding\nCREATE DATABASE sampledb_custom\nWITH TEMPLATE template1\n     ENCODING 'UTF8'\n     LC_COLLATE 'en_US.UTF-8'\n     LC_CTYPE 'en_US.UTF-8';\n\n-- Database with specific owner\nCREATE DATABASE sampledb_owned\nWITH OWNER = myuser\n     ENCODING = 'UTF8';\n\n-- Database from template\nCREATE DATABASE test_db\nWITH TEMPLATE production_db;\n\n-- List available templates\nSELECT datname FROM pg_database WHERE datistemplate = true;\n\n-- Drop database\nDROP DATABASE sampledb;",
+        "description": "PostgreSQL uses templates for database creation. Templates provide a starting point with predefined objects and settings. template1 is the default template. Can create custom templates from existing databases.",
+        "keyDifferences": [],
+        "notes": []
+      },
+      "keyDifference": "SQL Server requires explicit file path specification with separate data and log files, while PostgreSQL uses template-based creation with no explicit file paths - all file management is handled by PostgreSQL. PostgreSQL supports database cloning via templates."
+    },
+    {
+      "id": "database_configuration",
+      "title": "Database Configuration",
+      "sqlServer": {
+        "code": "-- Database-level options\nALTER DATABASE SampleDB SET RECOVERY FULL;\nALTER DATABASE SampleDB SET AUTO_SHRINK OFF;\nALTER DATABASE SampleDB SET AUTO_CLOSE OFF;\nALTER DATABASE SampleDB SET PAGE_VERIFY CHECKSUM;\n\n-- Server-level configuration\nEXEC sp_configure 'max server memory (MB)', 4096;\nRECONFIGURE;\n\n-- View database options\nSELECT name, collation_name, is_auto_close_on,\n       is_auto_shrink_on, page_verify_option_desc\nFROM sys.databases\nWHERE name = 'SampleDB';\n\n-- View server configuration\nSELECT name, value, description\nFROM sys.configurations\nWHERE name LIKE '%memory%';",
+        "description": "SQL Server configuration includes database-level settings via ALTER DATABASE and server-level settings via sp_configure. Database options set via ALTER DATABASE, server options require sp_configure and RECONFIGURE. Some settings require SQL Server restart.",
+        "notes": []
+      },
+      "postgres": {
+        "code": "-- Database-level settings\nALTER DATABASE sampledb SET work_mem = '64MB';\nALTER DATABASE sampledb SET maintenance_work_mem = '256MB';\nALTER DATABASE sampledb SET default_statistics_target = 1000;\n\n-- Session-level settings\nSET work_mem = '128MB';\nSET enable_seqscan = off;\n\n-- View current settings\nSHOW work_mem;\nSHOW ALL;\n\n-- Configuration file locations\nSHOW config_file;\nSHOW hba_file;\nSHOW data_directory;\n\n-- View database-specific settings\nSELECT datname, setconfig\nFROM pg_db_role_setting drs\nLEFT JOIN pg_database d ON d.oid = drs.setdatabase\nWHERE datname = 'sampledb';\n\n-- Reload configuration\nSELECT pg_reload_conf();",
+        "description": "PostgreSQL configuration uses postgresql.conf for server settings, pg_hba.conf for authentication, and supports database/role-specific overrides. postgresql.conf contains main configuration. Many settings can be changed without restart.",
+        "keyDifferences": [],
+        "notes": []
+      },
+      "keyDifference": "SQL Server stores configuration in system tables and requires sp_configure/RECONFIGURE for changes, while PostgreSQL uses file-based configuration (postgresql.conf and pg_hba.conf) with hierarchical settings that can be overridden at database, role, or session level. PostgreSQL supports hot reload for many settings."
+    }
+  ]
+}

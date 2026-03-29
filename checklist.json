@@ -1,0 +1,320 @@
+{
+  "version": "1.0.0",
+  "topics": [
+    {
+      "id": "data_types",
+      "title": "Data Types",
+      "description": "Mapping SQL Server data types to their PostgreSQL equivalents, including numeric, string, date/time, and binary types",
+      "categoryId": "fundamentals",
+      "categoryName": "Fundamentals",
+      "file": "data-types.json",
+      "status": "in_progress",
+      "retries": 0,
+      "createdAt": "2026-03-25T00:00:00.000Z",
+      "completedAt": null,
+      "concepts": [
+        {
+          "id": "numeric_types",
+          "title": "Numeric Types",
+          "description": "Integer types (TINYINT, SMALLINT, INT, BIGINT), decimal/numeric precision types, FLOAT, REAL, MONEY, and SMALLMONEY in SQL Server vs PostgreSQL equivalents (SMALLINT, INTEGER, BIGINT, NUMERIC, DECIMAL, REAL, DOUBLE PRECISION). Include identity/serial column types."
+        },
+        {
+          "id": "string_types",
+          "title": "String Types",
+          "description": "VARCHAR, NVARCHAR, CHAR, NCHAR, TEXT in SQL Server vs VARCHAR, CHAR, TEXT in PostgreSQL. Key differences: PostgreSQL VARCHAR is Unicode by default, no NVARCHAR needed. Include max length syntax differences (VARCHAR(MAX) vs TEXT)."
+        },
+        {
+          "id": "datetime_types",
+          "title": "Date and Time Types",
+          "description": "DATETIME, DATETIME2, DATE, TIME, SMALLDATETIME, DATETIMEOFFSET in SQL Server vs DATE, TIME, TIMESTAMP, TIMESTAMPTZ in PostgreSQL. Focus on timezone-aware types and precision differences."
+        },
+        {
+          "id": "binary_and_other_types",
+          "title": "Binary and Specialty Types",
+          "description": "BINARY, VARBINARY, IMAGE, UNIQUEIDENTIFIER, BIT, XML in SQL Server vs BYTEA, UUID, BOOLEAN, XML in PostgreSQL. Also cover PostgreSQL-native types with no SQL Server equivalent: ARRAY, JSONB, INET, CIDR."
+        }
+      ]
+    },
+    {
+      "id": "indexes",
+      "title": "Indexes",
+      "description": "Creating and managing indexes including clustered, non-clustered, filtered, covering, and full-text indexes",
+      "categoryId": "performance",
+      "categoryName": "Performance & Optimization",
+      "file": "indexes.json",
+      "status": "assembling",
+      "retries": 0,
+      "createdAt": "2026-03-25T12:00:00.000Z",
+      "completedAt": null,
+      "concepts": [
+        {
+          "id": "clustered_vs_heap",
+          "title": "Clustered Index vs Heap",
+          "description": "SQL Server tables are clustered (B-tree ordered by PK) by default vs PostgreSQL heap storage where all tables are unordered heaps. Show CREATE CLUSTERED INDEX in SQL Server and explain why PostgreSQL has no equivalent concept. Include checking index type via system catalogs."
+        },
+        {
+          "id": "create_index",
+          "title": "Creating Non-Clustered Indexes",
+          "description": "CREATE INDEX syntax including unique indexes, composite indexes, included columns (INCLUDE clause in SQL Server vs INCLUDE in PostgreSQL), and index naming conventions. Show both single-column and multi-column examples."
+        },
+        {
+          "id": "filtered_partial_indexes",
+          "title": "Filtered and Partial Indexes",
+          "description": "SQL Server filtered indexes (CREATE INDEX ... WHERE condition) vs PostgreSQL partial indexes (CREATE INDEX ... WHERE condition). Both use WHERE clause but PostgreSQL partial indexes are more flexible. Show practical example filtering on non-NULL or status column."
+        },
+        {
+          "id": "index_types",
+          "title": "Index Types",
+          "description": "SQL Server index types: clustered, non-clustered, columnstore, XML, spatial vs PostgreSQL index types: B-tree (default), Hash, GiST, GIN, BRIN, SP-GiST. Focus on when to use GIN (for JSONB/arrays/full-text) and BRIN (for sequential data like timestamps)."
+        }
+      ]
+    },
+    {
+      "id": "stored_procedures",
+      "title": "Stored Procedures and Functions",
+      "description": "Creating and calling stored procedures, user-defined functions, and output parameters",
+      "categoryId": "programmability",
+      "categoryName": "Programmability",
+      "file": "stored-procedures.json",
+      "status": "complete",
+      "retries": 0,
+      "createdAt": "2026-03-26T00:00:00.000Z",
+      "completedAt": "2026-03-26T00:00:00.000Z",
+      "concepts": [
+        {
+          "id": "create_procedure",
+          "title": "Creating Stored Procedures",
+          "description": "CREATE PROCEDURE syntax in SQL Server (T-SQL) vs CREATE OR REPLACE FUNCTION / CREATE PROCEDURE in PostgreSQL. Show a realistic procedure with input parameters, a SELECT query, and error handling. Key difference: PostgreSQL procedures (PG11+) vs functions, and the need to specify a language (plpgsql)."
+        },
+        {
+          "id": "output_parameters",
+          "title": "Output Parameters and Return Values",
+          "description": "SQL Server OUTPUT parameters and RETURN integer value vs PostgreSQL OUT parameters and function return types. Show how to call a procedure/function with output parameters and retrieve the results."
+        },
+        {
+          "id": "scalar_functions",
+          "title": "Scalar User-Defined Functions",
+          "description": "CREATE FUNCTION returning a scalar value in SQL Server (T-SQL) vs PostgreSQL (PL/pgSQL RETURNS scalar_type). Show a practical example: a function that formats a full name from first/last. Include calling the function in a SELECT statement."
+        },
+        {
+          "id": "table_valued_functions",
+          "title": "Table-Valued Functions",
+          "description": "SQL Server inline table-valued functions (ITVF) and multi-statement TVFs vs PostgreSQL RETURNS TABLE and RETURNS SETOF. Show a practical example returning rows from a query with parameters. PostgreSQL SET-RETURNING functions are more powerful — demonstrate RETURNS TABLE syntax."
+        }
+      ]
+    },
+    {
+      "id": "transactions_locking",
+      "title": "Transactions and Locking",
+      "description": "Transaction control, isolation levels, locking behavior, and deadlock handling",
+      "categoryId": "database",
+      "categoryName": "Database Management",
+      "file": "transactions-locking.json",
+      "status": "complete",
+      "retries": 0,
+      "createdAt": "2026-03-26T12:00:00.000Z",
+      "completedAt": "2026-03-26T12:00:00.000Z",
+      "concepts": [
+        {
+          "id": "transaction_control",
+          "title": "Transaction Control",
+          "description": "BEGIN TRANSACTION / COMMIT / ROLLBACK / SAVE TRANSACTION in SQL Server vs BEGIN / COMMIT / ROLLBACK / SAVEPOINT in PostgreSQL. Show nested transactions with SAVE TRANSACTION (SQL Server) vs SAVEPOINT (PostgreSQL). Key difference: SQL Server uses SAVE TRANSACTION while PostgreSQL uses SAVEPOINT."
+        },
+        {
+          "id": "isolation_levels",
+          "title": "Isolation Levels",
+          "description": "SET TRANSACTION ISOLATION LEVEL in SQL Server (READ UNCOMMITTED, READ COMMITTED, REPEATABLE READ, SNAPSHOT, SERIALIZABLE) vs PostgreSQL (READ UNCOMMITTED treated as READ COMMITTED, READ COMMITTED, REPEATABLE READ, SERIALIZABLE). Key difference: PostgreSQL uses MVCC so READ UNCOMMITTED does not exist in practice. Show how to set isolation level in both."
+        },
+        {
+          "id": "locking_hints",
+          "title": "Locking Hints",
+          "description": "SQL Server table hints (WITH (NOLOCK), WITH (UPDLOCK), WITH (HOLDLOCK), WITH (ROWLOCK)) vs PostgreSQL locking (SELECT ... FOR UPDATE, SELECT ... FOR SHARE, SELECT ... FOR NO KEY UPDATE). Key difference: NOLOCK (dirty reads) has no direct PostgreSQL equivalent — use READ COMMITTED + MVCC instead."
+        },
+        {
+          "id": "deadlock_handling",
+          "title": "Deadlock Detection and Handling",
+          "description": "SQL Server deadlock detection via error 1205 caught in BEGIN CATCH vs PostgreSQL deadlock detection via ERROR code 40P01 caught in EXCEPTION block. Show retry logic pattern for both platforms. Include querying deadlock info from sys.dm_exec_requests (SQL Server) vs pg_stat_activity (PostgreSQL)."
+        }
+      ]
+    },
+    {
+      "id": "string_functions",
+      "title": "String Functions",
+      "description": "Common string manipulation functions: searching, splitting, formatting, and pattern matching",
+      "categoryId": "query_techniques",
+      "categoryName": "Query Techniques",
+      "file": "string-functions.json",
+      "status": "complete",
+      "retries": 0,
+      "createdAt": "2026-03-26T10:00:00.000Z",
+      "completedAt": "2026-03-26T10:00:00.000Z",
+      "concepts": [
+        {
+          "id": "search_and_replace",
+          "title": "Search and Replace",
+          "description": "CHARINDEX, PATINDEX, REPLACE, STUFF in SQL Server vs POSITION/STRPOS, REGEXP_REPLACE, REPLACE, OVERLAY in PostgreSQL. Show finding a substring position and replacing content within a string. Key difference: PATINDEX uses SQL Server wildcard patterns while PostgreSQL uses POSIX regex."
+        },
+        {
+          "id": "string_splitting",
+          "title": "String Splitting",
+          "description": "STRING_SPLIT (SQL Server 2016+) returning a table of values vs PostgreSQL STRING_TO_ARRAY combined with UNNEST, or REGEXP_SPLIT_TO_TABLE. Show splitting a comma-delimited string into rows. Also cover OPENJSON for JSON arrays vs PostgreSQL jsonb_array_elements."
+        },
+        {
+          "id": "string_aggregation",
+          "title": "String Aggregation",
+          "description": "STRING_AGG (SQL Server 2017+) and FOR XML PATH (legacy) vs PostgreSQL STRING_AGG. Both have near-identical STRING_AGG syntax but PostgreSQL has had it longer. Show grouping rows and concatenating values with a delimiter. Include LISTAGG-style patterns."
+        },
+        {
+          "id": "format_and_padding",
+          "title": "Formatting and Padding",
+          "description": "FORMAT() function, REPLICATE, LEFT, RIGHT, LTRIM/RTRIM in SQL Server vs LPAD, RPAD, TRIM, LEFT, RIGHT, TO_CHAR in PostgreSQL. Show zero-padding numbers, formatting dates as strings, and padding strings to fixed width."
+        }
+      ]
+    },
+    {
+      "id": "window_functions",
+      "title": "Window Functions",
+      "description": "Ranking, aggregate, and value window functions with OVER, PARTITION BY, and frame specifications",
+      "categoryId": "query_techniques",
+      "categoryName": "Query Techniques",
+      "file": "window-functions.json",
+      "status": "complete",
+      "retries": 0,
+      "createdAt": "2026-03-26T12:00:00.000Z",
+      "completedAt": "2026-03-26T12:00:00.000Z",
+      "concepts": [
+        {
+          "id": "ranking_functions",
+          "title": "Ranking Functions",
+          "description": "ROW_NUMBER(), RANK(), DENSE_RANK(), NTILE() with OVER (PARTITION BY ... ORDER BY ...) in SQL Server vs PostgreSQL — both platforms have identical syntax. Show a practical example: ranking sales by region, finding duplicates with ROW_NUMBER, and quartile assignment with NTILE."
+        },
+        {
+          "id": "aggregate_window_functions",
+          "title": "Aggregate Window Functions",
+          "description": "SUM(), AVG(), COUNT(), MIN(), MAX() with OVER clause for running totals, moving averages, and cumulative counts. Show ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW for running totals. Both platforms support the same syntax — emphasize this parity."
+        },
+        {
+          "id": "lead_lag",
+          "title": "LAG and LEAD",
+          "description": "LAG() and LEAD() for accessing previous/next row values in SQL Server vs PostgreSQL — identical syntax. Show a practical example: calculating period-over-period change (e.g., month-over-month sales difference). Include the optional offset and default value parameters."
+        },
+        {
+          "id": "first_last_value",
+          "title": "FIRST_VALUE and LAST_VALUE",
+          "description": "FIRST_VALUE() and LAST_VALUE() with frame specification in SQL Server vs PostgreSQL. Key difference: LAST_VALUE() requires explicit ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING to behave as expected in both platforms — demonstrate the common gotcha."
+        }
+      ]
+    },
+    {
+      "id": "error_handling",
+      "title": "Error Handling",
+      "description": "Structured error handling, custom errors, and error information functions",
+      "categoryId": "programmability",
+      "categoryName": "Programmability",
+      "file": "error-handling.json",
+      "status": "complete",
+      "retries": 0,
+      "createdAt": "2026-03-27T00:00:00.000Z",
+      "completedAt": "2026-03-27T00:00:00.000Z",
+      "concepts": [
+        {
+          "id": "try_catch",
+          "title": "TRY/CATCH vs EXCEPTION Block",
+          "description": "SQL Server BEGIN TRY / BEGIN CATCH / END TRY / END CATCH with ERROR_MESSAGE(), ERROR_NUMBER(), ERROR_SEVERITY(), ERROR_STATE() vs PostgreSQL EXCEPTION WHEN condition THEN inside a DO block or function, with SQLERRM, SQLSTATE. Show catching a division-by-zero error and re-raising it."
+        },
+        {
+          "id": "custom_errors",
+          "title": "Custom Error Messages",
+          "description": "RAISERROR and THROW in SQL Server vs RAISE EXCEPTION in PostgreSQL. Show raising a custom error with message, severity, and state in SQL Server vs raising with errcode and message in PostgreSQL. Key difference: PostgreSQL RAISE has no severity concept, uses errcode instead."
+        },
+        {
+          "id": "error_logging",
+          "title": "Error Logging Patterns",
+          "description": "Logging errors to a table inside BEGIN CATCH in SQL Server using a dedicated error log table vs the same pattern in PostgreSQL EXCEPTION block. Show a reusable error logging pattern: capture error details and INSERT into an audit/error table, then re-raise."
+        }
+      ]
+    },
+    {
+      "id": "instance_resource_configuration",
+      "title": "Instance Resource Configuration",
+      "description": "Managing server memory allocation and parallelism settings for database instances",
+      "categoryId": "performance",
+      "categoryName": "Performance & Optimization",
+      "file": "server-memory.json",
+      "status": "complete",
+      "retries": 0,
+      "createdAt": "2026-03-27T00:00:00.000Z",
+      "completedAt": "2026-03-27T00:00:00.000Z",
+      "concepts": [
+        {
+          "id": "max_server_memory",
+          "title": "Max Server Memory",
+          "description": "SQL Server: sp_configure 'max server memory (MB)' and the SSMS Server Properties GUI to cap total memory the SQL Server process can use. PostgreSQL: shared_buffers in postgresql.conf (recommended 25% of RAM) controls the shared buffer pool; use pg_reload_conf() to apply without restart or ALTER SYSTEM SET shared_buffers. Key difference: SQL Server has a single memory cap for the whole instance; PostgreSQL has multiple memory parameters each controlling different behavior (shared_buffers, work_mem, maintenance_work_mem, effective_cache_size)."
+        },
+        {
+          "id": "maxdop_and_parallelism",
+          "title": "MAXDOP and Cost Threshold for Parallelism",
+          "description": "SQL Server: sp_configure 'max degree of parallelism' (MAXDOP) controls how many CPU/vCPU cores a single query can use; 'cost threshold for parallelism' sets the minimum estimated query cost (in seconds on a reference hardware) before a query is eligible for parallel execution. PostgreSQL equivalents: max_parallel_workers_per_gather limits parallel worker processes per Gather node, max_parallel_workers limits total parallel workers system-wide, and parallel_setup_cost / parallel_tuple_cost control the planner's cost model for parallelism. Key difference: SQL Server uses a single MAXDOP knob while PostgreSQL has separate settings for workers per node vs system-wide, and uses cost-based parameters rather than a direct cost threshold."
+        }
+      ]
+    },
+    {
+      "id": "log_shipping",
+      "title": "Log Shipping",
+      "description": "Covers SQL Server log shipping setup vs PostgreSQL WAL-based streaming replication and standby servers for HA and read replicas, and the use of log shipping to migrate from one SQL server to another and Postgres equivalent.",
+      "categoryId": "high_availability",
+      "categoryName": "Database Migration and Reporting Copies",
+      "file": "log-shipping.json",
+      "status": "pending",
+      "retries": 0,
+      "createdAt": null,
+      "completedAt": null,
+      "concepts": [
+        {
+          "id": "log_shipping_setup_and_architecture",
+          "title": "Log Shipping Setup and Architecture",
+          "description": "SQL Server log shipping (primary, secondary, monitor server roles) and the log backup/copy/restore jobs vs PostgreSQL streaming replication setup with pg_basebackup, postgresql.conf (wal_level, max_wal_senders), pg_hba.conf, and standby.signal / recovery.conf. Key differences: SQL Server uses agent jobs on a schedule; PostgreSQL streams WAL continuously. Show the configuration steps for both."
+        },
+        {
+          "id": "using_log_shipping_for_migration",
+          "title": "Using Log Shipping for Migration",
+          "description": "Using SQL Server log shipping to perform near-zero-downtime migrations between SQL Server instances (backup primary, restore to new server, keep in sync, then final cutover) vs PostgreSQL logical replication (CREATE SUBSCRIPTION / CREATE PUBLICATION) for migrating between PostgreSQL instances with minimal downtime. Key difference: cross-platform migration (SQL Server to PostgreSQL) requires a different approach — tools like pgloader, AWS SCT, or ora2pg — since WAL-based replication is not cross-platform."
+        }
+      ]
+    },
+    {
+      "id": "json_support",
+      "title": "JSON Support",
+      "description": "Storing, querying, and manipulating JSON data natively in SQL Server and PostgreSQL",
+      "categoryId": "query_techniques",
+      "categoryName": "Query Techniques",
+      "file": "json-support.json",
+      "status": "pending",
+      "retries": 0,
+      "createdAt": null,
+      "completedAt": null,
+      "concepts": [
+        {
+          "id": "json_storage",
+          "title": "JSON Storage",
+          "description": "SQL Server stores JSON as NVARCHAR with no dedicated type vs PostgreSQL JSON and JSONB types. JSONB stores binary parsed JSON enabling indexing and fast querying. Show CREATE TABLE with JSON column in both, and the ISJSON() function (SQL Server) vs checking JSONB validity. Key difference: PostgreSQL JSONB is a first-class type with GIN index support."
+        },
+        {
+          "id": "json_querying",
+          "title": "Querying JSON Values",
+          "description": "JSON_VALUE() and JSON_QUERY() in SQL Server vs ->> and -> operators and jsonb_extract_path() in PostgreSQL. Show extracting a scalar value and a nested object from a JSON column in a WHERE clause and SELECT list. Include handling NULL for missing keys."
+        },
+        {
+          "id": "json_construction",
+          "title": "Building JSON from Rows",
+          "description": "FOR JSON AUTO and FOR JSON PATH in SQL Server vs json_agg(), json_build_object(), jsonb_build_array() in PostgreSQL. Show converting a query result into a JSON array of objects. Key difference: SQL Server FOR JSON is a query-level clause while PostgreSQL uses aggregate functions."
+        },
+        {
+          "id": "json_modification",
+          "title": "Modifying JSON",
+          "description": "JSON_MODIFY() in SQL Server vs jsonb_set(), jsonb_insert(), || (concatenation) in PostgreSQL. Show updating a single key in a JSON column without replacing the entire value. PostgreSQL JSONB operators are more expressive — demonstrate the || merge operator."
+        }
+      ]
+    }
+  ]
+}

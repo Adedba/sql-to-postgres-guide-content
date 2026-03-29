@@ -1,0 +1,71 @@
+{
+  "id": "instance_resource_configuration",
+  "title": "Instance Resource Configuration",
+  "description": "Managing server memory allocation and parallelism settings for database instances",
+  "concepts": [
+    {
+      "id": "max_server_memory",
+      "title": "Max Server Memory",
+      "sqlServer": {
+        "code": "-- Check current memory settings (readable without sysadmin)\nSELECT\n    name,\n    value_in_use AS current_value_mb,\n    minimum,\n    maximum,\n    description\nFROM sys.configurations\nWHERE name IN ('max server memory (MB)', 'min server memory (MB)');\n\n-- Set max server memory to 8 GB (requires sysadmin role)\nEXEC sp_configure 'show advanced options', 1;\nRECONFIGURE;\nEXEC sp_configure 'max server memory (MB)', 8192;\nRECONFIGURE;\n\n-- Verify the change\nSELECT name, value_in_use AS current_value_mb\nFROM sys.configurations\nWHERE name = 'max server memory (MB)';",
+        "description": "SQL Server caps total memory using sp_configure 'max server memory (MB)'. This is an advanced option — first enable 'show advanced options', then set the limit, and call RECONFIGURE to apply. The sys.configurations catalog view lets any user inspect current settings. Setting this prevents SQL Server from consuming all available RAM and starving the OS.",
+        "notes": [
+          "Requires sysadmin role to run sp_configure",
+          "RECONFIGURE applies the change immediately — no restart needed",
+          "Default is 2147483647 MB (unlimited) — always set a cap on production servers",
+          "Leave 2–4 GB for the OS; e.g., on a 16 GB server set max server memory to 12288 MB",
+          "sys.configurations is readable by any user even without sysadmin"
+        ]
+      },
+      "postgres": {
+        "code": "-- View current memory-related settings in postgresql.conf\nSELECT name, setting, unit, context, short_desc\nFROM pg_settings\nWHERE name IN (\n    'shared_buffers',\n    'work_mem',\n    'maintenance_work_mem',\n    'effective_cache_size'\n)\nORDER BY name;\n\n-- Apply a new shared_buffers value without editing postgresql.conf\n-- (requires superuser; needs restart to take effect)\nALTER SYSTEM SET shared_buffers = '2GB';\n\n-- Reload config for parameters that support it (work_mem etc.)\nSELECT pg_reload_conf();\n\n-- Verify the pending value (will apply after restart for shared_buffers)\nSELECT name, setting, unit, pending_restart\nFROM pg_settings\nWHERE name IN ('shared_buffers', 'work_mem', 'maintenance_work_mem', 'effective_cache_size');",
+        "description": "PostgreSQL does not have a single memory cap like SQL Server. Instead, multiple parameters each control a different memory pool. shared_buffers is the closest equivalent — it sizes the shared buffer cache (recommend 25% of RAM). work_mem limits memory per sort/hash operation per query, and maintenance_work_mem controls VACUUM and index builds. Use ALTER SYSTEM SET to persist changes to postgresql.auto.conf, then pg_reload_conf() for parameters that don't require a restart.",
+        "keyDifferences": [
+          "No single memory cap: PostgreSQL has separate parameters for each memory pool (shared_buffers, work_mem, maintenance_work_mem, effective_cache_size)",
+          "shared_buffers requires a PostgreSQL restart to take effect; work_mem and maintenance_work_mem can be changed per-session or reloaded live",
+          "ALTER SYSTEM writes to postgresql.auto.conf and persists across restarts; direct postgresql.conf edits also work",
+          "effective_cache_size does not allocate memory — it is a planner hint about the OS file cache available"
+        ],
+        "notes": [
+          "Recommended starting values on a 16 GB server: shared_buffers=4GB, work_mem=64MB, maintenance_work_mem=512MB, effective_cache_size=12GB",
+          "work_mem is per-sort-operation — a complex query with many sorts can multiply this value many times",
+          "pg_settings shows both the current running value (setting) and whether a restart is pending (pending_restart)",
+          "Use ALTER SYSTEM rather than editing postgresql.conf directly so the auto.conf overlay is preserved"
+        ]
+      },
+      "keyDifference": "SQL Server uses a single 'max server memory' cap for the whole process; PostgreSQL uses multiple independent parameters each controlling a different memory pool, with no single global memory limit."
+    },
+    {
+      "id": "maxdop_and_parallelism",
+      "title": "MAXDOP and Cost Threshold for Parallelism",
+      "sqlServer": {
+        "code": "-- View current parallelism settings\nSELECT\n    name,\n    value_in_use AS current_value,\n    minimum,\n    maximum,\n    description\nFROM sys.configurations\nWHERE name IN (\n    'max degree of parallelism',\n    'cost threshold for parallelism'\n);\n\n-- Set MAXDOP to 4 and cost threshold to 25 (requires sysadmin)\nEXEC sp_configure 'show advanced options', 1;\nRECONFIGURE;\nEXEC sp_configure 'max degree of parallelism', 4;\nEXEC sp_configure 'cost threshold for parallelism', 25;\nRECONFIGURE;\n\n-- Override MAXDOP at query level (no special permissions needed)\nSELECT TOP 100 *\nFROM sys.objects\nORDER BY name\nOPTION (MAXDOP 1);",
+        "description": "SQL Server controls parallelism through two sp_configure settings: 'max degree of parallelism' (MAXDOP) caps CPU cores per query, and 'cost threshold for parallelism' sets the minimum estimated query cost before the optimizer considers parallel plans. MAXDOP can also be overridden per-query with OPTION (MAXDOP n), allowing fine-grained control without changing the server default.",
+        "notes": [
+          "MAXDOP 0 means unlimited (use all available CPUs) — the default on most installations",
+          "Microsoft recommends MAXDOP = number of physical cores per NUMA node, capped at 8",
+          "Cost threshold default is 5 (very low) — most DBAs raise it to 25–50 for OLTP workloads",
+          "OPTION (MAXDOP 1) at query level disables parallelism for that specific query",
+          "sp_configure changes require sysadmin role; query hints require no special permissions"
+        ]
+      },
+      "postgres": {
+        "code": "-- View current parallelism settings\nSELECT name, setting, unit, context, short_desc\nFROM pg_settings\nWHERE name IN (\n    'max_parallel_workers_per_gather',\n    'max_parallel_workers',\n    'parallel_setup_cost',\n    'parallel_tuple_cost',\n    'min_parallel_table_scan_size',\n    'min_parallel_index_scan_size'\n)\nORDER BY name;\n\n-- Change server-wide parallelism settings (requires superuser)\nALTER SYSTEM SET max_parallel_workers_per_gather = 4;\nALTER SYSTEM SET max_parallel_workers = 8;\nALTER SYSTEM SET parallel_setup_cost = 500;\nSELECT pg_reload_conf();\n\n-- Override parallelism for a single session (like MAXDOP query hint)\nSET max_parallel_workers_per_gather = 1;  -- disable parallelism for this session\n\n-- Verify current session setting\nSHOW max_parallel_workers_per_gather;\n\n-- Reset to server default\nRESET max_parallel_workers_per_gather;",
+        "description": "PostgreSQL uses separate parameters to control parallelism. max_parallel_workers_per_gather limits worker processes per Gather plan node (analogous to MAXDOP). max_parallel_workers caps total parallel workers system-wide. parallel_setup_cost and parallel_tuple_cost are cost-model inputs the planner uses to decide when parallelism is worthwhile — lower values make the planner more aggressive about parallelism. Per-session SET overrides behave like MAXDOP query hints.",
+        "keyDifferences": [
+          "No single MAXDOP knob: PostgreSQL separates workers-per-node (max_parallel_workers_per_gather) from system total (max_parallel_workers)",
+          "No 'cost threshold for parallelism': PostgreSQL uses parallel_setup_cost and parallel_tuple_cost as planner cost inputs, not a hard threshold",
+          "SET max_parallel_workers_per_gather = 1 at session level is the equivalent of OPTION (MAXDOP 1)",
+          "min_parallel_table_scan_size and min_parallel_index_scan_size control the minimum relation size before parallelism is considered"
+        ],
+        "notes": [
+          "Recommended starting point: max_parallel_workers_per_gather = half the CPU count, max_parallel_workers = CPU count",
+          "Setting max_parallel_workers_per_gather = 0 disables parallelism for queries — equivalent to MAXDOP 1",
+          "parallel_setup_cost default is 1000; lowering it (e.g., to 100) makes the planner prefer parallel plans sooner",
+          "Changes via ALTER SYSTEM take effect after pg_reload_conf() without a restart"
+        ]
+      },
+      "keyDifference": "SQL Server uses a single MAXDOP setting plus a cost threshold to control parallelism; PostgreSQL uses separate parameters for per-node worker count vs system-wide total, and replaces the cost threshold with cost-model tuning parameters (parallel_setup_cost, parallel_tuple_cost)."
+    }
+  ]
+}

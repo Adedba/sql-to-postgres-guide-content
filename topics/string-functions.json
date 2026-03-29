@@ -1,0 +1,126 @@
+{
+  "id": "string_functions",
+  "title": "String Functions",
+  "description": "Common string manipulation functions: searching, splitting, formatting, and pattern matching",
+  "concepts": [
+    {
+      "id": "search_and_replace",
+      "title": "Search and Replace",
+      "sqlServer": {
+        "code": "DECLARE @text NVARCHAR(200) = N'Contact us at support@example.com for help.';\n\n-- CHARINDEX: find position of substring (1-based, 0 if not found)\nSELECT CHARINDEX('@', @text) AS at_position;              -- 22\n\n-- PATINDEX: find position using SQL wildcard pattern\nSELECT PATINDEX('%[a-z]@%', @text) AS pattern_position;  -- 21\n\n-- REPLACE: substitute all occurrences of a substring\nSELECT REPLACE(@text, 'support@example.com', 'help@company.com') AS replaced_text;\n-- Result: 'Contact us at help@company.com for help.'\n\n-- STUFF: delete length characters at start position, then insert replacement\n-- STUFF(string, start, length, replacement)\nSELECT STUFF(\n  @text,\n  CHARINDEX('support@example.com', @text),\n  LEN('support@example.com'),\n  'help@company.com'\n) AS stuffed_text;\n-- Result: 'Contact us at help@company.com for help.'",
+        "description": "SQL Server provides CHARINDEX for finding substring positions, PATINDEX for pattern-based searching using SQL wildcard syntax (%, _, [a-z]), REPLACE for straightforward substitution, and STUFF for positional deletion-plus-insertion. CHARINDEX returns 0 when the substring is not found.",
+        "notes": [
+          "CHARINDEX is case-insensitive by default (depends on collation)",
+          "PATINDEX uses SQL wildcard patterns (%, _, [charlist]), not POSIX regex",
+          "STUFF is useful when you know the exact position and length to replace",
+          "REPLACE replaces all occurrences; there is no built-in single-occurrence replace"
+        ]
+      },
+      "postgres": {
+        "code": "DO $$\nDECLARE\n  v_text TEXT := 'Contact us at support@example.com for help.';\nBEGIN\n  -- POSITION / STRPOS: find position of substring (1-based, 0 if not found)\n  RAISE NOTICE 'at_position: %', POSITION('@' IN v_text);     -- 22\n  RAISE NOTICE 'strpos result: %', STRPOS(v_text, '@');        -- 22 (alias)\n\n  -- REPLACE: substitute all occurrences (identical to SQL Server)\n  RAISE NOTICE 'replaced: %',\n    REPLACE(v_text, 'support@example.com', 'help@company.com');\n\n  -- REGEXP_REPLACE: replace using POSIX regular expression\n  RAISE NOTICE 'regexp_replace: %',\n    REGEXP_REPLACE(v_text, '[a-z]+@[a-z]+\\.[a-z]+', 'help@company.com');\n\n  -- OVERLAY: SQL-standard positional replacement (equivalent to STUFF)\n  -- OVERLAY(string PLACING replacement FROM start FOR length)\n  RAISE NOTICE 'overlay: %',\n    OVERLAY(v_text\n      PLACING 'help@company.com'\n      FROM    STRPOS(v_text, 'support@example.com')\n      FOR     LENGTH('support@example.com'));\nEND;\n$$;\n\n-- Inline SELECT examples\nSELECT\n  STRPOS('hello world', 'world')                            AS position_result,  -- 7\n  REPLACE('foo bar foo', 'foo', 'baz')                      AS replace_result,   -- 'baz bar baz'\n  REGEXP_REPLACE('price: 9.99', '[0-9\\.]+', '10.00')       AS regex_result,     -- 'price: 10.00'\n  OVERLAY('hello world' PLACING 'PostgreSQL' FROM 7 FOR 5)  AS overlay_result;  -- 'hello PostgreSQL'",
+        "description": "PostgreSQL offers POSITION(substr IN str) or STRPOS(str, substr) for locating substrings, REPLACE for simple substitution, REGEXP_REPLACE for POSIX-regex-powered replacement, and OVERLAY as the SQL-standard positional replacement equivalent to T-SQL STUFF. REGEXP_REPLACE is considerably more powerful than PATINDEX because it uses full POSIX regex syntax.",
+        "keyDifferences": [
+          "PATINDEX uses SQL wildcard patterns (%, _); PostgreSQL REGEXP_REPLACE uses full POSIX regular expressions",
+          "PostgreSQL has no STUFF function; use OVERLAY(string PLACING ... FROM ... FOR ...) instead",
+          "POSITION uses SQL standard syntax POSITION(substr IN str); STRPOS(str, substr) is the functional alias",
+          "REGEXP_REPLACE accepts an optional flags argument ('g' for global, 'i' for case-insensitive)"
+        ],
+        "notes": [
+          "STRPOS and POSITION are interchangeable; STRPOS matches the argument order of CHARINDEX",
+          "Use REGEXP_REPLACE with flag 'g' to replace all occurrences when using a regex pattern",
+          "OVERLAY is part of the SQL standard; it is less commonly seen but fully supported"
+        ]
+      },
+      "keyDifference": "PATINDEX uses SQL Server wildcard patterns (%, _, []); PostgreSQL uses REGEXP_REPLACE with full POSIX regex syntax. T-SQL STUFF becomes PostgreSQL OVERLAY for positional replacement."
+    },
+    {
+      "id": "string_splitting",
+      "title": "String Splitting",
+      "sqlServer": {
+        "code": "-- STRING_SPLIT: split a delimited string into a table of values (SQL Server 2016+)\nDECLARE @csv NVARCHAR(200) = N'apple,banana,cherry,date';\n\nSELECT value AS fruit\nFROM STRING_SPLIT(@csv, ',');\n-- Returns rows: apple | banana | cherry | date\n\n-- Use in a JOIN or WHERE clause\nSELECT p.product_name\nFROM products p\nJOIN STRING_SPLIT(N'apple,banana,cherry', ',') s\n  ON p.product_name = s.value;\n\n-- OPENJSON: parse a JSON array into rows\nDECLARE @json NVARCHAR(200) = N'[\"apple\",\"banana\",\"cherry\"]';\n\nSELECT [value] AS fruit\nFROM OPENJSON(@json);\n-- Returns rows: apple | banana | cherry",
+        "description": "STRING_SPLIT (introduced in SQL Server 2016) splits a delimited string into a single-column table result named 'value'. It can be used in FROM clauses and JOINs like any table. OPENJSON parses JSON arrays into rowsets and is the idiomatic way to shred JSON arrays into rows.",
+        "notes": [
+          "STRING_SPLIT does not guarantee order; use WITH (ENABLE_ORDINAL) in SQL Server 2022+ for positional ordinal",
+          "The single-character delimiter limitation was lifted in SQL Server 2022",
+          "OPENJSON can also parse JSON objects into key/value rows with typed columns using WITH clause"
+        ]
+      },
+      "postgres": {
+        "code": "-- STRING_TO_ARRAY + UNNEST: split a delimited string into rows\nSELECT unnest(string_to_array('apple,banana,cherry,date', ',')) AS fruit;\n-- Returns rows: apple | banana | cherry | date\n\n-- WITH ORDINALITY: preserve position/order\nSELECT fruit, ordinality AS position\nFROM unnest(string_to_array('apple,banana,cherry,date', ','))\n     WITH ORDINALITY AS t(fruit, ordinality);\n\n-- REGEXP_SPLIT_TO_TABLE: split using a POSIX regex delimiter\nSELECT regexp_split_to_table('apple, banana,  cherry', '\\s*,\\s*') AS fruit;\n-- Trims surrounding whitespace around the comma\n\n-- REGEXP_SPLIT_TO_ARRAY: split into an array instead of rows\nSELECT regexp_split_to_array('apple,banana,cherry', ',') AS fruit_array;\n-- Returns: {apple,banana,cherry}\n\n-- jsonb_array_elements_text: shred a JSON array into rows (equivalent to OPENJSON)\nSELECT value AS fruit\nFROM jsonb_array_elements_text('[\"apple\",\"banana\",\"cherry\"]'::jsonb);",
+        "description": "PostgreSQL splits strings by combining string_to_array with UNNEST, or using REGEXP_SPLIT_TO_TABLE for pattern-based splitting. WITH ORDINALITY provides the positional index that SQL Server 2022's ENABLE_ORDINAL offers. For JSON arrays, jsonb_array_elements_text is the idiomatic equivalent of OPENJSON.",
+        "keyDifferences": [
+          "PostgreSQL uses UNNEST(STRING_TO_ARRAY(...)) where SQL Server uses STRING_SPLIT()",
+          "PostgreSQL's REGEXP_SPLIT_TO_TABLE accepts full POSIX regex delimiters; SQL Server STRING_SPLIT only accepts a single character",
+          "WITH ORDINALITY provides row position natively; no special compatibility level required",
+          "jsonb_array_elements_text replaces OPENJSON for JSON array shredding"
+        ],
+        "notes": [
+          "string_to_array(str, delimiter, null_string) has a third argument to treat a specific value as NULL",
+          "UNNEST can expand multiple arrays in parallel in PostgreSQL 9.4+",
+          "regexp_split_to_array returns TEXT[] which can then be indexed or passed to other array functions"
+        ]
+      },
+      "keyDifference": "SQL Server uses STRING_SPLIT() as a table-valued function; PostgreSQL uses UNNEST(STRING_TO_ARRAY()) or REGEXP_SPLIT_TO_TABLE(). PostgreSQL's approach supports regex delimiters and WITH ORDINALITY for preserving row order."
+    },
+    {
+      "id": "string_aggregation",
+      "title": "String Aggregation",
+      "sqlServer": {
+        "code": "-- Setup: sample employee data\nCREATE TABLE #employees (\n  department NVARCHAR(50),\n  name       NVARCHAR(100)\n);\nINSERT INTO #employees VALUES\n  ('Engineering', 'Alice'), ('Engineering', 'Bob'),\n  ('Sales', 'Carol'), ('Sales', 'Dave'), ('Sales', 'Eve');\n\n-- STRING_AGG (SQL Server 2017+): concatenate values with a delimiter\nSELECT\n  department,\n  STRING_AGG(name, ', ') WITHIN GROUP (ORDER BY name) AS members\nFROM #employees\nGROUP BY department;\n-- Engineering | Alice, Bob\n-- Sales       | Carol, Dave, Eve\n\n-- FOR XML PATH (legacy, SQL Server 2005+): pre-2017 workaround\nSELECT\n  department,\n  STUFF(\n    (SELECT ', ' + name\n     FROM #employees e2\n     WHERE e2.department = e.department\n     ORDER BY name\n     FOR XML PATH('')),\n    1, 2, ''\n  ) AS members\nFROM #employees e\nGROUP BY department;\n\nDROP TABLE #employees;",
+        "description": "STRING_AGG (SQL Server 2017+) aggregates values into a delimited string, with WITHIN GROUP (ORDER BY ...) controlling sort order. The legacy FOR XML PATH('') technique used STUFF to strip the leading delimiter and is still encountered in older codebases.",
+        "notes": [
+          "STRING_AGG requires SQL Server 2017 (compatibility level 140+)",
+          "WITHIN GROUP (ORDER BY ...) is mandatory to guarantee consistent ordering",
+          "FOR XML PATH encodes special XML characters (&, <, >) — use STRING_AGG for new code",
+          "NULL values are automatically skipped by STRING_AGG"
+        ]
+      },
+      "postgres": {
+        "code": "-- Setup: sample employee data\nCREATE TEMP TABLE employees_agg (\n  department TEXT,\n  name       TEXT\n);\nINSERT INTO employees_agg VALUES\n  ('Engineering', 'Alice'), ('Engineering', 'Bob'),\n  ('Sales', 'Carol'), ('Sales', 'Dave'), ('Sales', 'Eve');\n\n-- STRING_AGG: concatenate values with a delimiter (available since PostgreSQL 9.0)\nSELECT\n  department,\n  string_agg(name, ', ' ORDER BY name) AS members\nFROM employees_agg\nGROUP BY department;\n-- Engineering | Alice, Bob\n-- Sales       | Carol, Dave, Eve\n\n-- ARRAY_AGG + ARRAY_TO_STRING: alternative producing same result\nSELECT\n  department,\n  array_to_string(array_agg(name ORDER BY name), ', ') AS members\nFROM employees_agg\nGROUP BY department;\n\n-- Filter with FILTER clause (PostgreSQL extension)\nSELECT\n  string_agg(name, ', ' ORDER BY name)\n    FILTER (WHERE department = 'Engineering') AS eng_members\nFROM employees_agg;\n\nDROP TABLE employees_agg;",
+        "description": "PostgreSQL's string_agg is nearly identical to SQL Server's STRING_AGG, with ORDER BY placed directly inside the aggregate call rather than in a separate WITHIN GROUP clause. It has been available since PostgreSQL 9.0, predating SQL Server 2017's introduction. The FILTER clause provides inline conditional aggregation.",
+        "keyDifferences": [
+          "ORDER BY is placed inside string_agg(expr, delim ORDER BY ...) rather than in a separate WITHIN GROUP clause",
+          "PostgreSQL string_agg has been available since version 9.0; SQL Server STRING_AGG requires 2017+",
+          "No FOR XML PATH workaround is needed; string_agg is available in all supported PostgreSQL versions",
+          "The FILTER (WHERE ...) clause allows conditional aggregation inline without a subquery"
+        ],
+        "notes": [
+          "NULL values are automatically excluded from string_agg, same as SQL Server",
+          "ARRAY_AGG produces a PostgreSQL array; use ARRAY_TO_STRING to convert to a delimited string",
+          "string_agg can be used as a window function with OVER() for non-grouping aggregation"
+        ]
+      },
+      "keyDifference": "Both platforms have STRING_AGG with nearly identical syntax, but SQL Server places ORDER BY in a separate WITHIN GROUP clause while PostgreSQL places it inside the aggregate call. PostgreSQL has had string_agg since version 9.0; SQL Server added it in 2017."
+    },
+    {
+      "id": "format_and_padding",
+      "title": "Formatting and Padding",
+      "sqlServer": {
+        "code": "DECLARE @num  INT      = 42;\nDECLARE @dt   DATETIME = '2026-03-15 09:05:03';\nDECLARE @str  NVARCHAR(20) = '   hello   ';\n\n-- FORMAT: zero-pad an integer to 6 digits using .NET format strings\nSELECT FORMAT(@num, 'D6') AS zero_padded;          -- '000042'\n\n-- FORMAT: format a date/time as a string\nSELECT FORMAT(@dt, 'yyyy-MM-dd')   AS date_str;    -- '2026-03-15'\nSELECT FORMAT(@dt, 'HH:mm:ss')     AS time_str;    -- '09:05:03'\n\n-- REPLICATE + RIGHT: manual zero-padding (faster than FORMAT for bulk ops)\nSELECT RIGHT(REPLICATE('0', 6) + CAST(@num AS NVARCHAR(10)), 6) AS replicate_padded;\n-- '000042'\n\n-- LEFT / RIGHT: extract fixed-width substrings from the left or right\nSELECT LEFT('Hello World', 5)  AS left_5;   -- 'Hello'\nSELECT RIGHT('Hello World', 5) AS right_5;  -- 'World'\n\n-- LTRIM / RTRIM: remove leading/trailing spaces\nSELECT LTRIM(@str) AS left_trimmed;         -- 'hello   '\nSELECT RTRIM(@str) AS right_trimmed;        -- '   hello'\nSELECT LTRIM(RTRIM(@str)) AS both_trimmed;  -- 'hello'",
+        "description": "SQL Server's FORMAT function uses .NET composite format strings for numbers and dates, making it flexible but slower than dedicated functions for high-volume operations. REPLICATE builds a repeated-character string. LTRIM/RTRIM trim only one side; combining them trims both sides. SQL Server 2022 adds TRIM with character specification.",
+        "notes": [
+          "FORMAT has higher overhead than CONVERT or CAST; avoid it in row-by-row processing of large datasets",
+          "REPLICATE + RIGHT is the traditional high-performance zero-padding pattern",
+          "SQL Server 2017+ TRIM(chars FROM string) trims both sides and can remove specific characters",
+          "LEFT and RIGHT return NULL if the string is NULL, and clamp silently if length exceeds string length"
+        ]
+      },
+      "postgres": {
+        "code": "-- LPAD / RPAD: pad a string on the left or right to a given width\nSELECT LPAD(42::TEXT, 6, '0')  AS zero_padded;    -- '000042'\nSELECT RPAD('hi', 10, '-')     AS right_padded;   -- 'hi--------'\n\n-- TO_CHAR: format numbers and dates using PostgreSQL format templates\nSELECT TO_CHAR(42, 'FM000000')              AS to_char_num;   -- '000042'\nSELECT TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD') AS date_str;      -- '2026-03-15'\nSELECT TO_CHAR(NOW(), 'HH24:MI:SS')        AS time_str;      -- '09:05:03'\nSELECT TO_CHAR(9999.99, 'FM$999,999.00')   AS money_str;     -- '$9,999.99'\n\n-- LEFT / RIGHT: identical to SQL Server\nSELECT LEFT('Hello World', 5)  AS left_5;   -- 'Hello'\nSELECT RIGHT('Hello World', 5) AS right_5;  -- 'World'\n\n-- TRIM / LTRIM / RTRIM: remove whitespace (or specific characters)\nSELECT TRIM('   hello   ')                  AS both_trimmed;  -- 'hello'\nSELECT LTRIM('   hello   ')                 AS left_trimmed;  -- 'hello   '\nSELECT RTRIM('   hello   ')                 AS right_trimmed; -- '   hello'\nSELECT TRIM(BOTH 'x' FROM 'xxhelloxx')      AS char_trimmed;  -- 'hello'\n\n-- REPEAT: equivalent to SQL Server REPLICATE\nSELECT REPEAT('0', 6)  AS repeated_zeros;  -- '000000'",
+        "description": "PostgreSQL uses LPAD/RPAD for direct padding, TO_CHAR for formatted number and date strings using PostgreSQL-specific format templates (not .NET format strings), and TRIM for whitespace removal. TRIM supports LEADING, TRAILING, and BOTH with optional character lists. REPEAT replaces SQL Server's REPLICATE.",
+        "keyDifferences": [
+          "SQL Server FORMAT uses .NET format strings ('D6', 'yyyy-MM-dd'); PostgreSQL TO_CHAR uses its own template syntax ('FM000000', 'YYYY-MM-DD')",
+          "PostgreSQL has native LPAD/RPAD functions; SQL Server achieves the same with REPLICATE + RIGHT",
+          "PostgreSQL TRIM(BOTH 'x' FROM str) can trim arbitrary characters, not just spaces",
+          "REPEAT is PostgreSQL's equivalent of SQL Server REPLICATE"
+        ],
+        "notes": [
+          "The FM prefix in TO_CHAR format strings suppresses leading/trailing spaces and zero-padding in output",
+          "LPAD/RPAD cast the first argument to TEXT implicitly, so numeric types must be cast explicitly",
+          "TO_CHAR is locale-aware for number formatting; use 'FM' prefix for consistent output across locales"
+        ]
+      },
+      "keyDifference": "SQL Server uses FORMAT with .NET-style format strings and REPLICATE for padding; PostgreSQL uses TO_CHAR with its own template syntax and dedicated LPAD/RPAD functions. PostgreSQL TRIM supports arbitrary character removal natively."
+    }
+  ]
+}

@@ -1,0 +1,139 @@
+{
+  "id": "stored_procedures",
+  "title": "Stored Procedures and Functions",
+  "description": "Creating and calling stored procedures, user-defined functions, and output parameters",
+  "concepts": [
+    {
+      "id": "create_procedure",
+      "title": "Creating Stored Procedures",
+      "sqlServer": {
+        "code": "-- Create a stored procedure with input parameters and error handling\nIF OBJECT_ID('dbo.usp_GetCustomersByCountry', 'P') IS NOT NULL\n    DROP PROCEDURE dbo.usp_GetCustomersByCountry;\nGO\n\nCREATE PROCEDURE dbo.usp_GetCustomersByCountry\n    @CountryCode NVARCHAR(10),\n    @MaxRows     INT = 100\nAS\nBEGIN\n    SET NOCOUNT ON;\n\n    BEGIN TRY\n        IF @CountryCode IS NULL OR LEN(TRIM(@CountryCode)) = 0\n        BEGIN\n            RAISERROR('CountryCode parameter cannot be null or empty.', 16, 1);\n            RETURN;\n        END\n\n        SELECT TOP (@MaxRows)\n            CustomerID,\n            Username,\n            FullName,\n            CountryCode,\n            LanguageCode\n        FROM dbo.CustomerProfiles\n        WHERE CountryCode = @CountryCode\n        ORDER BY FullName;\n    END TRY\n    BEGIN CATCH\n        DECLARE @ErrMsg  NVARCHAR(4000) = ERROR_MESSAGE();\n        DECLARE @ErrSev  INT            = ERROR_SEVERITY();\n        DECLARE @ErrSte  INT            = ERROR_STATE();\n        RAISERROR(@ErrMsg, @ErrSev, @ErrSte);\n    END CATCH\nEND;\nGO\n\n-- Execute the procedure\nEXEC dbo.usp_GetCustomersByCountry @CountryCode = 'US';\nEXEC dbo.usp_GetCustomersByCountry @CountryCode = 'GB', @MaxRows = 10;",
+        "description": "SQL Server stored procedures are created with CREATE PROCEDURE and use T-SQL as the procedural language. They support input parameters with default values, SET NOCOUNT ON to suppress row-count messages, and structured error handling via BEGIN TRY / BEGIN CATCH. Procedures are called with EXEC and return result sets directly to the caller.",
+        "notes": [
+          "SET NOCOUNT ON prevents 'N rows affected' messages from being sent to the client, improving performance in loops.",
+          "Use IF OBJECT_ID(...) IS NOT NULL to safely drop before recreating, or use CREATE OR ALTER PROCEDURE (SQL Server 2016+).",
+          "Procedures can return multiple result sets by including multiple SELECT statements.",
+          "The RAISERROR function re-throws the caught error with its original severity and state."
+        ]
+      },
+      "postgres": {
+        "code": "-- PostgreSQL uses CREATE PROCEDURE (PG 11+) or CREATE FUNCTION for routines\n-- Drop if exists first\nDROP PROCEDURE IF EXISTS get_customers_by_country(VARCHAR, INT);\n\nCREATE OR REPLACE PROCEDURE get_customers_by_country(\n    p_country_code  VARCHAR(10),\n    p_max_rows      INT DEFAULT 100\n)\nLANGUAGE plpgsql\nAS $$\nDECLARE\n    v_count INT;\nBEGIN\n    IF p_country_code IS NULL OR trim(p_country_code) = '' THEN\n        RAISE EXCEPTION 'country_code parameter cannot be null or empty'\n            USING ERRCODE = 'invalid_parameter_value';\n    END IF;\n\n    -- PostgreSQL procedures cannot return result sets directly.\n    -- Use a function with RETURNS TABLE for query results (see table_valued_functions).\n    -- Procedures are suited for DML operations, transaction control, and side effects.\n    SELECT COUNT(*) INTO v_count\n    FROM public.customer_profiles\n    WHERE country_code = p_country_code::CHAR;\n\n    RAISE NOTICE 'Found % customers for country: %', v_count, p_country_code;\nEND;\n$$;\n\n-- Call the procedure using CALL\nCALL get_customers_by_country('US');\nCALL get_customers_by_country('GB', 10);\n\n-- For returning rows, use a function with RETURNS TABLE instead:\nCREATE OR REPLACE FUNCTION get_customers_by_country_fn(\n    p_country_code  VARCHAR(10),\n    p_max_rows      INT DEFAULT 100\n)\nRETURNS TABLE (\n    customer_id   INT,\n    username      VARCHAR,\n    full_name     VARCHAR,\n    country_code  CHAR\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    IF p_country_code IS NULL OR trim(p_country_code) = '' THEN\n        RAISE EXCEPTION 'country_code cannot be null or empty'\n            USING ERRCODE = 'invalid_parameter_value';\n    END IF;\n\n    RETURN QUERY\n    SELECT\n        cp.customer_id,\n        cp.username,\n        cp.full_name,\n        cp.country_code\n    FROM public.customer_profiles cp\n    WHERE cp.country_code = p_country_code::CHAR\n    ORDER BY cp.full_name\n    LIMIT p_max_rows;\nEND;\n$$;\n\n-- Call the function in a SELECT\nSELECT * FROM get_customers_by_country_fn('US');",
+        "description": "PostgreSQL introduced CREATE PROCEDURE in version 11, but the traditional approach uses CREATE OR REPLACE FUNCTION with RETURNS TABLE for query results. All routines require a LANGUAGE declaration — most commonly plpgsql for procedural code. Procedures are called with CALL; functions are invoked in a SELECT. Unlike SQL Server, PostgreSQL procedures cannot return result sets directly, so a function with RETURNS TABLE is the standard pattern for returning rows.",
+        "keyDifferences": [
+          "PostgreSQL requires LANGUAGE plpgsql — there is no implicit procedural language.",
+          "PostgreSQL procedures (CREATE PROCEDURE) cannot return result sets; use functions with RETURNS TABLE instead.",
+          "Use CALL to invoke procedures; use SELECT to invoke functions.",
+          "CREATE OR REPLACE eliminates the need to drop and recreate.",
+          "Error handling uses RAISE EXCEPTION with ERRCODE instead of RAISERROR with severity/state.",
+          "Dollar-quoting ($$) is used instead of single quotes for the function body to avoid escaping issues."
+        ],
+        "notes": [
+          "CREATE PROCEDURE was added in PostgreSQL 11. On older versions, use functions for everything.",
+          "RAISE NOTICE sends an informational message to the client (equivalent to PRINT in SQL Server).",
+          "USING ERRCODE sets the SQLSTATE code for the exception, enabling precise error handling by callers.",
+          "The plpgsql language is bundled with PostgreSQL and requires no separate installation."
+        ]
+      },
+      "keyDifference": "PostgreSQL procedures cannot return result sets — use functions with RETURNS TABLE for query output. All routines require an explicit LANGUAGE declaration, and CALL is used to invoke procedures while SELECT invokes functions."
+    },
+    {
+      "id": "output_parameters",
+      "title": "Output Parameters and Return Values",
+      "sqlServer": {
+        "code": "-- Create a procedure with OUTPUT parameters and a RETURN value\nIF OBJECT_ID('dbo.usp_GetCustomerStats', 'P') IS NOT NULL\n    DROP PROCEDURE dbo.usp_GetCustomerStats;\nGO\n\nCREATE PROCEDURE dbo.usp_GetCustomerStats\n    @CountryCode    NVARCHAR(10),\n    @CustomerCount  INT OUTPUT,\n    @LatestUsername NVARCHAR(100) OUTPUT\nAS\nBEGIN\n    SET NOCOUNT ON;\n\n    SELECT\n        @CustomerCount  = COUNT(*),\n        @LatestUsername = MAX(Username)\n    FROM dbo.CustomerProfiles\n    WHERE CountryCode = @CountryCode;\n\n    -- RETURN passes an integer status code back to the caller\n    IF @CustomerCount = 0\n        RETURN 1;  -- 1 = no rows found\n\n    RETURN 0;     -- 0 = success\nEND;\nGO\n\n-- Calling the procedure and capturing OUTPUT parameters\nDECLARE @Count   INT;\nDECLARE @Latest  NVARCHAR(100);\nDECLARE @RetVal  INT;\n\nEXEC @RetVal = dbo.usp_GetCustomerStats\n    @CountryCode    = 'US',\n    @CustomerCount  = @Count  OUTPUT,\n    @LatestUsername = @Latest OUTPUT;\n\nSELECT\n    @Count  AS CustomerCount,\n    @Latest AS LatestUsername,\n    @RetVal AS ReturnValue;",
+        "description": "SQL Server procedures use the OUTPUT keyword on parameters to pass values back to the caller. The RETURN statement sends an integer status code (separate from output parameters). Callers must declare variables, pass them with the OUTPUT keyword, and read them after the EXEC call. The EXEC statement can capture the RETURN value by assigning it: EXEC @RetVal = dbo.ProcName.",
+        "notes": [
+          "OUTPUT parameters must be passed with the OUTPUT keyword at both the declaration and call site.",
+          "RETURN can only pass an integer. For other data types, use OUTPUT parameters.",
+          "Convention is RETURN 0 for success and non-zero for error conditions.",
+          "The OUTPUT keyword can be abbreviated as OUT."
+        ]
+      },
+      "postgres": {
+        "code": "-- PostgreSQL uses OUT parameters in functions\n-- The function returns a record containing all OUT parameter values\nDROP FUNCTION IF EXISTS get_customer_stats(VARCHAR);\n\nCREATE OR REPLACE FUNCTION get_customer_stats(\n    p_country_code    VARCHAR(10),\n    OUT p_customer_count  INT,\n    OUT p_latest_username VARCHAR(100)\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    SELECT\n        COUNT(*)::INT,\n        MAX(username)\n    INTO p_customer_count, p_latest_username\n    FROM public.customer_profiles\n    WHERE country_code = p_country_code::CHAR;\n\n    -- COUNT always returns a row, so p_customer_count will be 0 (not NULL) when no rows match\nEND;\n$$;\n\n-- Call the function and get all OUT parameters as columns\nSELECT * FROM get_customer_stats('US');\n\n-- Or capture individual output values into variables (inside plpgsql)\nDO $$\nDECLARE\n    v_count    INT;\n    v_latest   VARCHAR(100);\nBEGIN\n    SELECT p_customer_count, p_latest_username\n    INTO v_count, v_latest\n    FROM get_customer_stats('US');\n\n    RAISE NOTICE 'Count: %, Latest: %', v_count, v_latest;\nEND;\n$$;\n\n-- Returning a status code: use a scalar RETURNS INT function\nCREATE OR REPLACE FUNCTION get_customer_stats_with_status(\n    p_country_code    VARCHAR(10),\n    OUT p_customer_count  INT,\n    OUT p_latest_username VARCHAR(100),\n    OUT p_status_code     INT\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    SELECT COUNT(*)::INT, MAX(username)\n    INTO p_customer_count, p_latest_username\n    FROM public.customer_profiles\n    WHERE country_code = p_country_code::CHAR;\n\n    p_status_code := CASE WHEN p_customer_count = 0 THEN 1 ELSE 0 END;\nEND;\n$$;\n\nSELECT * FROM get_customer_stats_with_status('US');",
+        "description": "PostgreSQL uses OUT parameters declared in the function signature. When a function has OUT parameters, its return type is automatically a record containing those columns — no RETURNS clause is needed. The function is called like a table (SELECT * FROM fn()) and each OUT parameter appears as a column. There is no separate RETURN integer concept; status codes are simply added as additional OUT parameters.",
+        "keyDifferences": [
+          "PostgreSQL OUT parameters are declared in the function signature, not the body.",
+          "A function with OUT parameters returns a record — call it with SELECT * FROM fn() to see all values.",
+          "There is no RETURN integer status code concept; add a status OUT parameter instead.",
+          "PostgreSQL uses := for variable assignment inside plpgsql blocks.",
+          "OUT parameter values are automatically returned when the function exits — no explicit RETURN of the values needed."
+        ],
+        "notes": [
+          "A function with only OUT parameters implicitly returns a record type — the RETURNS clause is optional.",
+          "Inside a plpgsql function, OUT parameters are treated as regular local variables that get returned automatically.",
+          "Use SELECT ... INTO to populate OUT parameters from a query.",
+          "The DO block is PostgreSQL's equivalent of an anonymous batch — useful for testing without creating a permanent function."
+        ]
+      },
+      "keyDifference": "PostgreSQL OUT parameters are part of the function signature and returned as a record row — there is no separate RETURN integer mechanism. Call functions with OUT params using SELECT * FROM fn() to retrieve all output values as columns."
+    },
+    {
+      "id": "scalar_functions",
+      "title": "Scalar User-Defined Functions",
+      "sqlServer": {
+        "code": "-- Create a scalar function that formats a full name\nIF OBJECT_ID('dbo.fn_FormatFullName', 'FN') IS NOT NULL\n    DROP FUNCTION dbo.fn_FormatFullName;\nGO\n\nCREATE FUNCTION dbo.fn_FormatFullName\n(\n    @FirstName NVARCHAR(100),\n    @LastName  NVARCHAR(100),\n    @Format    NVARCHAR(20) = 'LAST_FIRST'\n)\nRETURNS NVARCHAR(205)\nAS\nBEGIN\n    DECLARE @Result NVARCHAR(205);\n\n    IF @Format = 'LAST_FIRST'\n        SET @Result = @LastName + ', ' + @FirstName;\n    ELSE IF @Format = 'FIRST_LAST'\n        SET @Result = @FirstName + ' ' + @LastName;\n    ELSE\n        SET @Result = @FirstName + ' ' + @LastName;\n\n    RETURN @Result;\nEND;\nGO\n\n-- Use the function in a SELECT\nSELECT\n    dbo.fn_FormatFullName('Jane', 'Smith', 'LAST_FIRST')  AS LastFirst,\n    dbo.fn_FormatFullName('Jane', 'Smith', 'FIRST_LAST')  AS FirstLast;\n\n-- Use in a table query (must prefix with schema)\nSELECT\n    CustomerID,\n    dbo.fn_FormatFullName(\n        LEFT(FullName, CHARINDEX(' ', FullName) - 1),\n        RIGHT(FullName, LEN(FullName) - CHARINDEX(' ', FullName))\n    ) AS FormattedName\nFROM dbo.CustomerProfiles;",
+        "description": "SQL Server scalar user-defined functions (UDFs) are created with CREATE FUNCTION and return a single value via a RETURNS data_type clause. The function body is procedural T-SQL enclosed in BEGIN/END. Scalar UDFs must be called with their schema prefix (e.g., dbo.fn_FormatFullName) in SQL queries. They can be used anywhere a scalar expression is valid: SELECT lists, WHERE clauses, computed columns.",
+        "notes": [
+          "SQL Server scalar UDFs can be performance-intensive when used on large tables because they execute once per row without parallelism (prior to SQL Server 2019 scalar UDF inlining).",
+          "SQL Server 2019+ introduced scalar UDF inlining, which can automatically convert simple scalar UDFs into inline expressions for better performance.",
+          "Always qualify function calls with the schema prefix (dbo.fn_Name) or the call will fail.",
+          "T-SQL scalar functions cannot contain DML (INSERT/UPDATE/DELETE) or execute stored procedures."
+        ]
+      },
+      "postgres": {
+        "code": "-- Create a scalar function in PostgreSQL using plpgsql\nDROP FUNCTION IF EXISTS fn_format_full_name(VARCHAR, VARCHAR, VARCHAR);\n\nCREATE OR REPLACE FUNCTION fn_format_full_name(\n    p_first_name  VARCHAR(100),\n    p_last_name   VARCHAR(100),\n    p_format      VARCHAR(20) DEFAULT 'LAST_FIRST'\n)\nRETURNS VARCHAR(205)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    IF p_format = 'LAST_FIRST' THEN\n        RETURN p_last_name || ', ' || p_first_name;\n    ELSIF p_format = 'FIRST_LAST' THEN\n        RETURN p_first_name || ' ' || p_last_name;\n    ELSE\n        RETURN p_first_name || ' ' || p_last_name;\n    END IF;\nEND;\n$$;\n\n-- Use the function in a SELECT (no schema prefix required for public schema)\nSELECT\n    fn_format_full_name('Jane', 'Smith', 'LAST_FIRST') AS last_first,\n    fn_format_full_name('Jane', 'Smith', 'FIRST_LAST') AS first_last;\n\n-- Use in a table query\nSELECT\n    customer_id,\n    fn_format_full_name(\n        split_part(full_name, ' ', 1),\n        split_part(full_name, ' ', 2)\n    ) AS formatted_name\nFROM public.customer_profiles;\n\n-- SQL-language scalar function (simpler, better optimized for pure SQL)\nCREATE OR REPLACE FUNCTION fn_format_full_name_sql(\n    p_first_name  VARCHAR,\n    p_last_name   VARCHAR,\n    p_format      VARCHAR DEFAULT 'LAST_FIRST'\n)\nRETURNS VARCHAR\nLANGUAGE sql\nIMMUTABLE STRICT\nAS $$\n    SELECT CASE p_format\n        WHEN 'LAST_FIRST' THEN p_last_name || ', ' || p_first_name\n        ELSE p_first_name || ' ' || p_last_name\n    END;\n$$;",
+        "description": "PostgreSQL scalar functions use RETURNS <type> and require a LANGUAGE declaration. For simple expressions, LANGUAGE sql is preferred over plpgsql because it allows the optimizer to inline the function. For conditional logic, plpgsql is appropriate. No schema prefix is needed for functions in the public schema (which is on the default search_path). The IMMUTABLE marking tells the optimizer the function always returns the same result for the same inputs, enabling query optimizations like index use.",
+        "keyDifferences": [
+          "No schema prefix required when calling functions in the public schema (search_path handles resolution).",
+          "LANGUAGE sql functions can be inlined by the optimizer — prefer for simple expressions over plpgsql.",
+          "IMMUTABLE, STABLE, and VOLATILE markings control optimizer behavior; SQL Server has no equivalent annotations.",
+          "PostgreSQL uses ELSIF (not ELSE IF) in plpgsql conditional blocks.",
+          "String concatenation uses || operator (same as SQL Server +, but || also works for nulls differently).",
+          "STRICT causes the function to return NULL immediately if any input is NULL, without executing the body."
+        ],
+        "notes": [
+          "LANGUAGE sql scalar functions are often faster than plpgsql because the planner can inline them into the calling query.",
+          "IMMUTABLE means the function's result depends only on its arguments and never changes — enables caching and index use.",
+          "STRICT (or CALLED ON NULL INPUT by default) controls NULL handling: STRICT returns NULL if any argument is NULL.",
+          "split_part(string, delimiter, n) is the PostgreSQL equivalent of splitting a string and taking the nth part."
+        ]
+      },
+      "keyDifference": "PostgreSQL functions do not require a schema prefix in calls (public schema is on the default search_path), and LANGUAGE sql functions can be inlined by the optimizer for better performance. Use IMMUTABLE to hint that the function result is deterministic."
+    },
+    {
+      "id": "table_valued_functions",
+      "title": "Table-Valued Functions",
+      "sqlServer": {
+        "code": "-- Inline Table-Valued Function (ITVF) — best performance, treated like a view\nIF OBJECT_ID('dbo.fn_GetCustomersByLanguage', 'IF') IS NOT NULL\n    DROP FUNCTION dbo.fn_GetCustomersByLanguage;\nGO\n\nCREATE FUNCTION dbo.fn_GetCustomersByLanguage\n(\n    @LanguageCode NVARCHAR(10),\n    @CountryCode  NVARCHAR(10) = NULL\n)\nRETURNS TABLE\nAS\nRETURN\n(\n    SELECT\n        CustomerID,\n        Username,\n        FullName,\n        CountryCode,\n        LanguageCode\n    FROM dbo.CustomerProfiles\n    WHERE LanguageCode = @LanguageCode\n      AND (@CountryCode IS NULL OR CountryCode = @CountryCode)\n);\nGO\n\n-- Use the ITVF like a table\nSELECT CustomerID, Username, FullName\nFROM dbo.fn_GetCustomersByLanguage('EN', NULL)\nORDER BY FullName;\n\n-- Filter results from the TVF\nSELECT *\nFROM dbo.fn_GetCustomersByLanguage('EN', 'US')\nWHERE FullName LIKE 'S%';\n\n-- Multi-Statement TVF (MSTVF) — less efficient, use only when ITVF is not possible\nIF OBJECT_ID('dbo.fn_GetCustomerSummary', 'TF') IS NOT NULL\n    DROP FUNCTION dbo.fn_GetCustomerSummary;\nGO\n\nCREATE FUNCTION dbo.fn_GetCustomerSummary\n(\n    @CountryCode NVARCHAR(10)\n)\nRETURNS @Result TABLE\n(\n    CountryCode  NVARCHAR(10),\n    CustomerCount INT,\n    Languages    NVARCHAR(MAX)\n)\nAS\nBEGIN\n    INSERT INTO @Result\n    SELECT\n        CountryCode,\n        COUNT(*),\n        STRING_AGG(DISTINCT LanguageCode, ', ')\n    FROM dbo.CustomerProfiles\n    WHERE CountryCode = @CountryCode\n    GROUP BY CountryCode;\n\n    RETURN;\nEND;\nGO\n\nSELECT * FROM dbo.fn_GetCustomerSummary('US');",
+        "description": "SQL Server has two types of table-valued functions: Inline TVFs (ITVF) which contain a single SELECT in a RETURNS TABLE AS RETURN clause and are treated like parameterized views by the optimizer, and Multi-Statement TVFs (MSTVF) which declare a table variable and populate it across multiple statements. ITVFs are strongly preferred for performance. Both types are queried with FROM dbo.fn_Name(params).",
+        "notes": [
+          "Inline TVFs are optimized like views — the optimizer can push predicates, use statistics, and produce parallel plans.",
+          "Multi-Statement TVFs prevent most optimizer optimizations and should be avoided when an inline TVF is possible.",
+          "TVFs can be joined to other tables in the FROM clause just like regular tables.",
+          "APPLY operators (CROSS APPLY, OUTER APPLY) are commonly used with TVFs to call them per-row."
+        ]
+      },
+      "postgres": {
+        "code": "-- PostgreSQL RETURNS TABLE function (equivalent to SQL Server ITVF)\nDROP FUNCTION IF EXISTS fn_get_customers_by_language(VARCHAR, VARCHAR);\n\nCREATE OR REPLACE FUNCTION fn_get_customers_by_language(\n    p_language_code  VARCHAR(10),\n    p_country_code   VARCHAR(10) DEFAULT NULL\n)\nRETURNS TABLE (\n    customer_id   INT,\n    username      VARCHAR,\n    full_name     VARCHAR,\n    country_code  CHAR,\n    language_code CHAR\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n    RETURN QUERY\n    SELECT\n        cp.customer_id,\n        cp.username,\n        cp.full_name,\n        cp.country_code,\n        cp.language_code\n    FROM public.customer_profiles cp\n    WHERE cp.language_code = p_language_code::CHAR\n      AND (p_country_code IS NULL OR cp.country_code = p_country_code::CHAR);\nEND;\n$$;\n\n-- Call it like a table\nSELECT customer_id, username, full_name\nFROM fn_get_customers_by_language('EN', NULL)\nORDER BY full_name;\n\n-- Filter results from the function\nSELECT *\nFROM fn_get_customers_by_language('EN', 'US')\nWHERE full_name LIKE 'S%';\n\n-- SQL-language set-returning function (most efficient — optimizer can inline)\nCREATE OR REPLACE FUNCTION fn_get_customers_by_language_sql(\n    p_language_code  VARCHAR,\n    p_country_code   VARCHAR DEFAULT NULL\n)\nRETURNS TABLE (\n    customer_id   INT,\n    username      VARCHAR,\n    full_name     VARCHAR,\n    country_code  CHAR\n)\nLANGUAGE sql\nSTABLE\nAS $$\n    SELECT\n        cp.customer_id,\n        cp.username,\n        cp.full_name,\n        cp.country_code\n    FROM public.customer_profiles cp\n    WHERE cp.language_code = p_language_code::CHAR\n      AND (p_country_code IS NULL OR cp.country_code = p_country_code::CHAR);\n$$;\n\n-- RETURNS SETOF — returns rows of an existing type (alternative syntax)\nCREATE OR REPLACE FUNCTION fn_get_all_customers_for_country(\n    p_country_code VARCHAR\n)\nRETURNS SETOF public.customer_profiles\nLANGUAGE sql\nSTABLE\nAS $$\n    SELECT * FROM public.customer_profiles\n    WHERE country_code = p_country_code::CHAR;\n$$;\n\nSELECT customer_id, username FROM fn_get_all_customers_for_country('US');\n\n-- LATERAL join (equivalent to SQL Server CROSS APPLY)\nSELECT DISTINCT cp.country_code, lang.username\nFROM public.customer_profiles cp\nCROSS JOIN LATERAL fn_get_customers_by_language('EN', cp.country_code::VARCHAR) lang;",
+        "description": "PostgreSQL set-returning functions (SRFs) use RETURNS TABLE or RETURNS SETOF to return multiple rows. They are called in the FROM clause just like SQL Server TVFs. LANGUAGE sql SRFs are the most efficient because the optimizer can inline them. LANGUAGE plpgsql SRFs use RETURN QUERY to emit rows. The LATERAL join syntax (CROSS JOIN LATERAL) is equivalent to SQL Server's CROSS APPLY for calling functions per-row.",
+        "keyDifferences": [
+          "RETURNS TABLE and RETURNS SETOF are the PostgreSQL equivalents of SQL Server table-valued functions.",
+          "LANGUAGE sql SRFs are inlined by the optimizer, giving them performance similar to SQL Server inline TVFs.",
+          "Use RETURN QUERY inside plpgsql to emit a result set from a query.",
+          "LATERAL is the SQL standard keyword for what SQL Server calls CROSS APPLY / OUTER APPLY.",
+          "RETURNS SETOF <table_type> returns rows matching an existing table or composite type definition.",
+          "No schema prefix needed for public schema functions — just call fn_name() directly."
+        ],
+        "notes": [
+          "STABLE tells the optimizer the function returns the same results within a single transaction for the same inputs — enables better planning.",
+          "RETURNS SETOF existing_table returns full rows of that table type, useful when you want all columns.",
+          "PostgreSQL does not have a separate 'multi-statement TVF' concept — plpgsql functions handle complex logic natively.",
+          "LATERAL allows functions to reference columns from preceding FROM items, enabling per-row function calls.",
+          "RETURN QUERY EXECUTE allows dynamic SQL within a set-returning function for advanced cases."
+        ]
+      },
+      "keyDifference": "PostgreSQL set-returning functions (RETURNS TABLE / RETURNS SETOF) are the equivalent of SQL Server TVFs. Use LANGUAGE sql for maximum optimizer efficiency (equivalent to SQL Server inline TVFs). LATERAL replaces SQL Server's CROSS APPLY / OUTER APPLY syntax."
+    }
+  ]
+}

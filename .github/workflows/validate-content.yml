@@ -1,0 +1,133 @@
+name: Validate Content
+
+on:
+  pull_request:
+    paths:
+      - 'topics/**/*.json'
+      - 'manifest.json'
+      - 'schema.json'
+  push:
+    branches:
+      - main
+    paths:
+      - 'topics/**/*.json'
+      - 'manifest.json'
+      - 'schema.json'
+
+jobs:
+  validate:
+    name: Validate JSON Files
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install JSON Schema Validator
+        run: npm install -g ajv-cli ajv-formats
+
+      - name: Validate manifest.json
+        run: |
+          echo "✅ Validating manifest.json structure..."
+          ajv validate -s schema.json -d manifest.json --strict=false || {
+            echo "❌ manifest.json validation failed!"
+            exit 1
+          }
+
+      - name: Validate all topic files
+        run: |
+          echo "✅ Validating all topic JSON files..."
+          for file in topics/*.json; do
+            if [ -f "$file" ]; then
+              echo "Validating $file..."
+              ajv validate -s schema.json -d "$file" --strict=false || {
+                echo "❌ Validation failed for $file"
+                exit 1
+              }
+            fi
+          done
+          echo "✅ All topic files validated successfully!"
+
+      - name: Check JSON formatting
+        run: |
+          echo "✅ Checking JSON formatting..."
+          for file in topics/*.json manifest.json; do
+            if [ -f "$file" ]; then
+              python3 -m json.tool "$file" > /dev/null || {
+                echo "❌ Invalid JSON in $file"
+                exit 1
+              }
+            fi
+          done
+          echo "✅ All JSON files are properly formatted!"
+
+      - name: Validate required fields
+        run: |
+          echo "✅ Checking for required fields in topic files..."
+          for file in topics/*.json; do
+            if [ -f "$file" ]; then
+              # Check if file contains required top-level fields
+              if ! grep -q '"id"' "$file"; then
+                echo "❌ Missing 'id' field in $file"
+                exit 1
+              fi
+              if ! grep -q '"title"' "$file"; then
+                echo "❌ Missing 'title' field in $file"
+                exit 1
+              fi
+              if ! grep -q '"concepts"' "$file"; then
+                echo "❌ Missing 'concepts' field in $file"
+                exit 1
+              fi
+            fi
+          done
+          echo "✅ All required fields present!"
+
+      - name: Check for duplicate IDs
+        run: |
+          echo "✅ Checking for duplicate concept IDs..."
+          duplicates=$(grep -h '"id"' topics/*.json | sort | uniq -d)
+          if [ ! -z "$duplicates" ]; then
+            echo "❌ Duplicate IDs found:"
+            echo "$duplicates"
+            exit 1
+          fi
+          echo "✅ No duplicate IDs found!"
+
+      - name: Validate manifest references
+        run: |
+          echo "✅ Checking that all manifest references exist..."
+          # Extract file paths from manifest.json
+          files=$(grep -o '"file": *"[^"]*"' manifest.json | cut -d'"' -f4)
+
+          for filepath in $files; do
+            if [ ! -f "$filepath" ]; then
+              echo "❌ File referenced in manifest does not exist: $filepath"
+              exit 1
+            fi
+          done
+          echo "✅ All manifest references valid!"
+
+      - name: Report success
+        if: success()
+        run: |
+          echo ""
+          echo "🎉 ================================"
+          echo "🎉 All validations passed!"
+          echo "🎉 Content is ready to merge!"
+          echo "🎉 ================================"
+
+      - name: Report failure
+        if: failure()
+        run: |
+          echo ""
+          echo "❌ ================================"
+          echo "❌ Validation failed!"
+          echo "❌ Please review the errors above"
+          echo "❌ ================================"
+          exit 1

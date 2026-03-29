@@ -1,0 +1,35 @@
+{
+  "id": "your_topic_id",
+  "title": "Your Topic Title",
+  "description": "Brief description of what this topic covers (1-2 sentences)",
+  "concepts": [
+    {
+      "id": "concept_id",
+      "title": "Concept Title",
+      "sqlServer": {
+        "code": "-- SQL Server code example\n-- Show practical, working code that DBAs can copy-paste\nSELECT example FROM sql_server_table;",
+        "description": "Explain the SQL Server approach clearly. Assume the reader is an experienced SQL Server DBA who needs to understand how this works before learning PostgreSQL.\n\nKey points:\n• Use bullet points for important features\n• Explain WHY things work this way\n• Include best practices and gotchas\n\nProvide context that an experienced DBA would appreciate.",
+        "notes": [
+          "Optional: Additional tips or warnings",
+          "Best practices specific to SQL Server",
+          "Common pitfalls to avoid"
+        ]
+      },
+      "postgres": {
+        "code": "-- PostgreSQL equivalent code\n-- Show the PostgreSQL way of achieving the same result\nSELECT example FROM postgres_table;",
+        "description": "Explain how PostgreSQL handles this differently or similarly. Focus on helping SQL Server DBAs understand the PostgreSQL perspective.\n\nKey points:\n• Highlight what's similar to SQL Server\n• Explain what's different and why\n• Show PostgreSQL-specific features or advantages\n\nHelp the DBA understand not just HOW but WHY PostgreSQL does it this way.",
+        "keyDifferences": [
+          "Main difference #1 between SQL Server and PostgreSQL",
+          "Main difference #2",
+          "Main difference #3"
+        ],
+        "notes": [
+          "PostgreSQL-specific tips",
+          "Best practices for PostgreSQL",
+          "Things to watch out for when migrating"
+        ]
+      },
+      "keyDifference": "One-sentence summary of the most important difference between SQL Server and PostgreSQL for this concept."
+    }
+  ]
+}

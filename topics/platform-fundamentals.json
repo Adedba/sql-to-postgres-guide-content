@@ -1,0 +1,71 @@
+{
+  "id": "platform-fundamentals",
+  "title": "Platform Fundamentals",
+  "description": "Installation, management tools, versions, and support models",
+  "concepts": [
+    {
+      "id": "installation",
+      "title": "Installation & Setup",
+      "sqlServer": {
+        "code": "-- SQL Server Installation Methods:\n\n-- Method 1: GUI Installer\n-- Download setup.exe and run as Administrator\n-- Follow wizard to configure all settings\n\n-- Method 2: Command Line Silent Install\nsetup.exe /ConfigurationFile=MyConfigurationFile.ini /QUIET\n\n-- Sample ConfigurationFile.ini for DBA settings:\n[OPTIONS]\nACTION=\"Install\"\nFEATURES=SQLENGINE,FULLTEXT,RS\nINSTANCENAME=\"MSSQLSERVER\"\nSQLSVCACCOUNT=\"NT Service\\MSSQLSERVER\"\nSQLSVCSTARTUPTYPE=\"Automatic\"\nAGTSVCACCOUNT=\"NT Service\\SQLSERVERAGENT\"\nAGTSVCSTARTUPTYPE=\"Automatic\"\nSQLSYSADMINACCOUNTS=\"BUILTIN\\Administrators\"\nINSTALLSQLDATADIR=\"D:\\Program Files\\Microsoft SQL Server\"\nSQLUSERDBDIR=\"E:\\Data\"\nSQLUSERDBLOGDIR=\"F:\\Logs\"\nSQLTEMPDBDIR=\"G:\\TempDB\"\nSQLTEMPDBLOGDIR=\"G:\\TempDB\"\nSQLTEMPDBFILECOUNT=8\nSQLTEMPDBFILEGROWTH=64\nSQLTEMPDBLOGFILEGROWTH=64\nSQLMAXDOP=0\nSQLMAXMEMORY=2147483647\n\n-- Verify installation and settings\nSELECT @@VERSION;\nSELECT name, physical_name FROM sys.master_files\nWHERE database_id IN (1,2,3,4); -- System DBs\n\n-- Check TempDB configuration\nSELECT name, physical_name, size/128 AS size_mb\nFROM sys.master_files WHERE database_id = 2;\n\n-- Check MAXDOP and Memory settings\nSELECT name, value FROM sys.configurations\nWHERE name IN ('max degree of parallelism', 'max server memory (MB)');",
+        "description": "SQL Server installation provides extensive control over file locations, service accounts, and initial performance settings. DBAs can configure system databases, TempDB optimization, and key performance parameters during installation. GUI wizard or silent install with INI file supported. Separate file locations for data/logs configurable at install time.",
+        "notes": []
+      },
+      "postgres": {
+        "code": "-- PostgreSQL Installation & Configuration:\n\n-- Method 1: Package Manager Installation (Ubuntu/Debian)\nsudo apt update && sudo apt install postgresql postgresql-contrib\n\n-- Method 2: Custom Compilation (for specific configurations)\nwget https://ftp.postgresql.org/pub/source/v16.1/postgresql-16.1.tar.gz\ntar -xzf postgresql-16.1.tar.gz && cd postgresql-16.1\n./configure --prefix=/usr/local/pgsql --with-openssl\nmake && sudo make install\n\n-- Initialize cluster with custom data directory\nsudo -u postgres initdb -D /data/postgresql/main --encoding=UTF8 --locale=en_US.UTF-8\n\n-- PostgreSQL equivalent configurations:\n\n-- 1. Data Directory Location (equivalent to system databases)\n# Set in postgresql.conf or during initdb\ndata_directory = '/data/postgresql/main'\n\n-- 2. Tablespace for user data (equivalent to user data files)\nCREATE TABLESPACE user_data LOCATION '/data/postgresql/user_data';\nCREATE DATABASE mydb TABLESPACE user_data;\n\n-- 3. WAL Location (equivalent to transaction logs)\n# Set in postgresql.conf\nwal_directory = '/logs/postgresql/wal'  # PostgreSQL 10+\n# Or symlink pg_wal directory during initdb\n\n-- 4. Temporary File Location (TempDB equivalent)\n# Set in postgresql.conf\ntemp_tablespaces = 'temp_space'\nCREATE TABLESPACE temp_space LOCATION '/temp/postgresql';\n\n-- 5. Performance Settings (MAXDOP/Memory equivalents)\n# postgresql.conf settings:\nmax_parallel_workers_per_gather = 4    # MAXDOP equivalent\nmax_worker_processes = 16              # Total parallel workers\nshared_buffers = '256MB'               # Memory for caching\nwork_mem = '4MB'                      # Per-operation memory\nmaintenance_work_mem = '64MB'         # Maintenance operations\n\n-- 6. Service Configuration (systemd)\nsudo systemctl enable postgresql\nsudo systemctl start postgresql\nsudo systemctl status postgresql\n\n-- Verify installation and settings\nSELECT version();\nSHOW data_directory;\nSHOW config_file;\nSELECT name, setting FROM pg_settings\nWHERE name IN ('max_parallel_workers_per_gather', 'shared_buffers', 'work_mem');",
+        "description": "PostgreSQL installation is simpler but requires post-installation configuration for DBA-specific settings. File locations, performance tuning, and service management handled through configuration files and tablespaces. Configuration mainly through postgresql.conf. Tablespaces provide flexible data placement.",
+        "keyDifferences": [],
+        "notes": []
+      },
+      "keyDifference": "SQL Server configures file locations, services, and performance settings during installation via GUI or config file, while PostgreSQL uses package managers for installation and requires post-install configuration via postgresql.conf and tablespaces. PostgreSQL uses a single data directory vs SQL Server's separate system/user locations."
+    },
+    {
+      "id": "management_tools",
+      "title": "IDE & Management Tools",
+      "sqlServer": {
+        "code": "-- SQL Server Management Studio (SSMS)\n-- Primary GUI tool for SQL Server management\n-- Download from Microsoft website\n\n-- sqlcmd - Command line utility\nsqlcmd -S ServerName -E\nsqlcmd -S ServerName -U username -P password\n\n-- Example sqlcmd usage\nsqlcmd -S localhost -E -Q \"SELECT @@VERSION\"\nsqlcmd -S localhost -E -i script.sql -o output.txt",
+        "description": "SSMS is the primary management tool for SQL Server, providing a comprehensive GUI. sqlcmd provides command-line access for scripting and automation. SSMS is free and feature-rich with integrated debugging and query tools.",
+        "notes": []
+      },
+      "postgres": {
+        "code": "-- pgAdmin - Web-based administration tool\n-- Download from pgadmin.org or install via package manager\nsudo apt install pgadmin4\n\n-- psql - Command line interface\npsql -h hostname -U username -d database\npsql postgresql://username:password@hostname:port/database\n\n-- Example psql usage\npsql -U postgres -c \"SELECT version();\"\npsql -U postgres -d mydb -f script.sql\npsql -U postgres -d mydb -c \"\\dt\"  -- List tables",
+        "description": "pgAdmin provides web-based administration interface. psql is the primary command-line tool, offering powerful interactive features and scripting capabilities. pgAdmin runs in web browser and many third-party tools are available (DBeaver, DataGrip).",
+        "keyDifferences": [],
+        "notes": []
+      },
+      "keyDifference": "SSMS is a full-featured desktop application while pgAdmin is web-based. psql is more feature-rich than sqlcmd with advanced formatting and scripting capabilities. PostgreSQL has broader cross-platform tool support."
+    },
+    {
+      "id": "versions_releases",
+      "title": "Versions & Release Cycles",
+      "sqlServer": {
+        "code": "-- Check SQL Server version\nSELECT @@VERSION;\nSELECT SERVERPROPERTY('ProductVersion') AS Version,\n       SERVERPROPERTY('ProductLevel') AS ServicePack,\n       SERVERPROPERTY('Edition') AS Edition;\n\n-- Major versions:\n-- SQL Server 2019 (15.x)\n-- SQL Server 2017 (14.x)\n-- SQL Server 2016 (13.x)\n-- SQL Server 2014 (12.x)\n-- SQL Server 2012 (11.x)",
+        "description": "SQL Server follows irregular release cycles with major versions typically every 2-3 years. Each version has cumulative updates and service packs. Version numbering can be confusing with internal version numbers.",
+        "notes": []
+      },
+      "postgres": {
+        "code": "-- Check PostgreSQL version\nSELECT version();\nSHOW server_version;\n\n-- Version numbering (since v10):\n-- PostgreSQL 16 (2023)\n-- PostgreSQL 15 (2022)\n-- PostgreSQL 14 (2021)\n-- PostgreSQL 13 (2020)\n-- PostgreSQL 12 (2019)\n\n-- Legacy numbering (before v10):\n-- PostgreSQL 9.6, 9.5, 9.4, etc.",
+        "description": "PostgreSQL follows a predictable annual release cycle with major versions released in October each year. Version numbering simplified starting with version 10. Annual major releases with minor releases every 3 months.",
+        "keyDifferences": [],
+        "notes": []
+      },
+      "keyDifference": "PostgreSQL has a predictable annual release cycle (every October) while SQL Server releases are irregular (every 2-3 years). PostgreSQL simplified its version numbering since v10, making it clearer than SQL Server's version system."
+    },
+    {
+      "id": "support_eol",
+      "title": "Support & End of Life",
+      "sqlServer": {
+        "code": "-- SQL Server Support Lifecycle\n-- Mainstream Support: 5 years\n-- Extended Support: 5 years\n-- Total: 10 years per version\n\n-- Check current support status at:\n-- https://docs.microsoft.com/lifecycle/products/sql-server\n\n-- Example lifecycle dates:\n-- SQL Server 2019: 2030 end of support\n-- SQL Server 2017: 2027 end of support\n-- SQL Server 2016: 2026 end of support",
+        "description": "SQL Server provides 10 years of support (5 mainstream + 5 extended) through Microsoft Support. Commercial licensing required for all features. Clear end-of-life dates published in advance.",
+        "notes": []
+      },
+      "postgres": {
+        "code": "-- PostgreSQL Support Policy\n-- 5 years of support for each major version\n-- Community support through mailing lists\n-- Commercial support available from vendors\n\n-- Support timeline:\n-- PostgreSQL 16: Until 2028\n-- PostgreSQL 15: Until 2027\n-- PostgreSQL 14: Until 2026\n-- PostgreSQL 13: Until 2025\n-- PostgreSQL 12: Until 2024\n\n-- Commercial support vendors:\n-- EnterpriseDB, 2ndQuadrant, Crunchy Data",
+        "description": "PostgreSQL provides 5 years of community support per major version. Commercial support available from various vendors with different service levels. Active community support forums and no licensing costs for core software.",
+        "keyDifferences": [],
+        "notes": []
+      },
+      "keyDifference": "SQL Server offers 10-year support lifecycle (5+5) through commercial Microsoft Support, while PostgreSQL provides 5 years of community support with optional commercial support from multiple vendors. PostgreSQL is open source with no licensing costs."
+    }
+  ]
+}

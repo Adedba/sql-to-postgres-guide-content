@@ -1,0 +1,105 @@
+{
+  "id": "error_handling",
+  "title": "Error Handling",
+  "description": "Structured error handling, custom errors, and error information functions",
+  "concepts": [
+    {
+      "id": "try_catch",
+      "title": "TRY/CATCH vs EXCEPTION Block",
+      "sqlServer": {
+        "code": "-- SQL Server TRY/CATCH Error Handling\nBEGIN TRY\n    DECLARE @numerator   INT = 100;\n    DECLARE @denominator INT = 0;\n    DECLARE @result      INT;\n\n    -- This will throw a divide-by-zero error\n    SET @result = @numerator / @denominator;\n\n    SELECT @result AS Result;\nEND TRY\nBEGIN CATCH\n    DECLARE @ErrMsg   NVARCHAR(4000) = ERROR_MESSAGE();\n    DECLARE @ErrNum   INT            = ERROR_NUMBER();\n    DECLARE @ErrSev   INT            = ERROR_SEVERITY();\n    DECLARE @ErrState INT            = ERROR_STATE();\n\n    PRINT 'Caught error #' + CAST(@ErrNum AS NVARCHAR)\n        + ' Sev '   + CAST(@ErrSev AS NVARCHAR)\n        + ' State ' + CAST(@ErrState AS NVARCHAR)\n        + ': ' + @ErrMsg;\n\n    -- Re-raise with original error number, severity, and state\n    THROW;\nEND CATCH;",
+        "description": "SQL Server uses BEGIN TRY / BEGIN CATCH / END TRY / END CATCH blocks to intercept runtime errors. Inside the CATCH block, the error functions ERROR_MESSAGE(), ERROR_NUMBER(), ERROR_SEVERITY(), and ERROR_STATE() expose details about the caught exception. The THROW statement (SQL Server 2012+) re-raises the original error with its original number, severity, and state intact.",
+        "notes": [
+          "ERROR_MESSAGE(), ERROR_NUMBER(), ERROR_SEVERITY(), ERROR_STATE() only return values inside a CATCH block.",
+          "THROW with no arguments re-raises the current error; THROW with arguments raises a new error (number must be >= 50000).",
+          "TRY/CATCH does not catch errors with severity 10 or lower (informational) or severity 20+ that terminate the connection.",
+          "Use SET XACT_ABORT ON in procedures to ensure transactions are rolled back on error before the CATCH block fires."
+        ]
+      },
+      "postgres": {
+        "code": "-- PostgreSQL EXCEPTION Block Error Handling\n-- Error handling lives inside a DO block or function body\nDO $$\nDECLARE\n    v_numerator   INT := 100;\n    v_denominator INT := 0;\n    v_result      INT;\nBEGIN\n    -- This will raise a division_by_zero exception\n    v_result := v_numerator / v_denominator;\n\n    RAISE NOTICE 'Result: %', v_result;\nEXCEPTION\n    WHEN division_by_zero THEN\n        RAISE NOTICE 'Caught error: SQLSTATE=%, Message=%',\n                     SQLSTATE, SQLERRM;\n\n        -- Re-raise the same error\n        RAISE;\nEND;\n$$;",
+        "description": "PostgreSQL error handling uses an EXCEPTION section inside a PL/pgSQL BEGIN...END block (in a DO block or function). Specific error conditions are named (e.g., division_by_zero) or caught with WHEN OTHERS for any error. SQLERRM contains the error message and SQLSTATE contains the 5-character error code. A bare RAISE re-raises the current exception.",
+        "keyDifferences": [
+          "PostgreSQL error handling requires PL/pgSQL — it cannot be done in plain SQL; SQL Server TRY/CATCH works in any T-SQL batch.",
+          "PostgreSQL uses named conditions (division_by_zero, unique_violation) or WHEN OTHERS; SQL Server uses a single CATCH block for all errors.",
+          "PostgreSQL uses SQLERRM and SQLSTATE; SQL Server uses ERROR_MESSAGE(), ERROR_NUMBER(), ERROR_SEVERITY(), ERROR_STATE() functions.",
+          "PostgreSQL has no equivalent of SQL Server ERROR_SEVERITY() — PostgreSQL errors do not have numeric severity levels.",
+          "RAISE (bare) in PostgreSQL re-raises; THROW (bare) in SQL Server re-raises — both preserve the original error details."
+        ],
+        "notes": [
+          "Use WHEN OTHERS THEN to catch any exception, similar to a generic catch-all.",
+          "GET STACKED DIAGNOSTICS (PostgreSQL 9.2+) provides richer error context: message_text, pg_exception_detail, pg_exception_hint, schema_name, table_name.",
+          "Named error conditions map to SQLSTATE codes — see the PostgreSQL documentation appendix for the full list.",
+          "Exception handling in PostgreSQL uses subtransactions internally; the main block's work is rolled back when an exception is caught."
+        ]
+      },
+      "keyDifference": "SQL Server TRY/CATCH works in plain T-SQL batches and provides ERROR_SEVERITY(). PostgreSQL EXCEPTION blocks require PL/pgSQL, use named conditions and SQLSTATE codes, and have no severity concept."
+    },
+    {
+      "id": "custom_errors",
+      "title": "Custom Error Messages",
+      "sqlServer": {
+        "code": "-- SQL Server: Raising custom errors with RAISERROR and THROW\n\n-- RAISERROR (legacy, supports printf-style formatting)\nDECLARE @CustomerID INT = -1;\nIF @CustomerID < 0\nBEGIN\n    RAISERROR(\n        'Invalid CustomerID %d: must be a positive integer.',\n        16,   -- severity (1-25; 11-16 = user errors)\n        1,    -- state (1-255)\n        @CustomerID\n    );\nEND;\n\n-- THROW (SQL Server 2012+, preferred)\n-- Error number must be >= 50000 for user-defined errors\nDECLARE @OrderID  INT = -5;\nDECLARE @ErrMsg   NVARCHAR(2048);\n\nIF @OrderID <= 0\nBEGIN\n    SET @ErrMsg = CONCAT(\n        'OrderID ', @OrderID,\n        ' is invalid. Value must be greater than zero.'\n    );\n    THROW 50001, @ErrMsg, 1;\nEND;",
+        "description": "SQL Server provides two mechanisms for raising custom errors. RAISERROR (legacy) accepts a printf-style format string with severity (1–25) and state (1–255) parameters. THROW (SQL Server 2012+) is the modern replacement: it requires an error number >= 50000, a message, and a state. THROW is preferred because it correctly sets the ERROR_NUMBER() inside a CATCH block, while RAISERROR always reports 50000.",
+        "notes": [
+          "RAISERROR severity 10 or lower is informational and does not trigger a CATCH block.",
+          "THROW always uses severity 16 — you cannot control severity with THROW.",
+          "Error numbers 1–49999 are reserved for SQL Server system errors; user-defined errors must be >= 50000.",
+          "sp_addmessage can register reusable custom error messages by number in sys.messages.",
+          "RAISERROR with NOWAIT sends the message immediately to the client instead of buffering it."
+        ]
+      },
+      "postgres": {
+        "code": "-- PostgreSQL: Raising custom errors with RAISE EXCEPTION\nDO $$\nDECLARE\n    v_customer_id INT := -1;\n    v_order_id    INT := -5;\nBEGIN\n    -- Basic RAISE EXCEPTION with a format message\n    IF v_customer_id < 0 THEN\n        RAISE EXCEPTION\n            'Invalid CustomerID %: must be a positive integer.',\n            v_customer_id\n            USING ERRCODE = 'P0001';  -- raise_exception (user-defined)\n    END IF;\n\n    -- RAISE with DETAIL and HINT for richer error context\n    IF v_order_id <= 0 THEN\n        RAISE EXCEPTION\n            'OrderID % is invalid. Value must be greater than zero.',\n            v_order_id\n            USING ERRCODE = 'P0001',\n                  HINT    = 'Provide a positive integer OrderID.',\n                  DETAIL  = 'Received value: ' || v_order_id::TEXT;\n    END IF;\nEND;\n$$;",
+        "description": "PostgreSQL uses RAISE EXCEPTION to signal an error from PL/pgSQL code. The message can include % placeholders filled by subsequent arguments. The USING clause attaches an ERRCODE (5-character SQLSTATE), DETAIL (additional context), and HINT (suggestion for the user). PostgreSQL has no severity concept — all RAISE EXCEPTION calls are equivalent to a fatal user error.",
+        "keyDifferences": [
+          "PostgreSQL RAISE has no severity parameter; SQL Server RAISERROR/THROW control severity explicitly.",
+          "PostgreSQL uses ERRCODE (SQLSTATE string like 'P0001') instead of numeric error numbers.",
+          "PostgreSQL RAISE supports DETAIL and HINT clauses for structured error context; SQL Server has no equivalent.",
+          "User-defined SQLSTATE codes in PostgreSQL use the range P0000–P9999 (class 'P') to avoid conflicts with standard codes.",
+          "SQL Server THROW always uses severity 16; PostgreSQL RAISE EXCEPTION is always an ERROR level (no severity scale)."
+        ],
+        "notes": [
+          "RAISE NOTICE, RAISE WARNING, RAISE INFO, and RAISE DEBUG are non-error levels that send messages without aborting execution.",
+          "RAISE EXCEPTION with no arguments inside an EXCEPTION handler re-raises the current exception.",
+          "Standard SQLSTATE codes (e.g., '23505' for unique violation) can be used in ERRCODE to map to known conditions.",
+          "The client receives DETAIL and HINT as separate fields in the PostgreSQL error response protocol."
+        ]
+      },
+      "keyDifference": "PostgreSQL RAISE EXCEPTION uses SQLSTATE error codes (e.g., 'P0001') and supports DETAIL/HINT clauses. SQL Server RAISERROR/THROW use numeric error numbers (>= 50000) and severity levels. PostgreSQL has no severity concept."
+    },
+    {
+      "id": "error_logging",
+      "title": "Error Logging Patterns",
+      "sqlServer": {
+        "code": "-- SQL Server: Error logging table and pattern\n\n-- Step 1: Create the error log table (run once)\nCREATE TABLE dbo.ErrorLog (\n    LogID         INT IDENTITY(1,1) PRIMARY KEY,\n    ErrorNumber   INT,\n    ErrorSeverity INT,\n    ErrorState    INT,\n    ErrorMessage  NVARCHAR(4000),\n    ErrorLine     INT,\n    LoggedAt      DATETIME2       DEFAULT SYSDATETIME(),\n    UserName      NVARCHAR(128)   DEFAULT SUSER_SNAME()\n);\n\n-- Step 2: Use inside a procedure or batch\nBEGIN TRY\n    -- Simulate a business operation that fails\n    DECLARE @val INT = 10 / 0;   -- divide-by-zero\nEND TRY\nBEGIN CATCH\n    -- Log the error before re-raising\n    INSERT INTO dbo.ErrorLog\n        (ErrorNumber, ErrorSeverity, ErrorState, ErrorMessage, ErrorLine)\n    VALUES (\n        ERROR_NUMBER(),\n        ERROR_SEVERITY(),\n        ERROR_STATE(),\n        ERROR_MESSAGE(),\n        ERROR_LINE()\n    );\n\n    -- Re-raise so the caller knows something failed\n    THROW;\nEND CATCH;",
+        "description": "The standard SQL Server error logging pattern creates a dedicated ErrorLog table, then inside every CATCH block captures the five error detail functions (ERROR_NUMBER, ERROR_SEVERITY, ERROR_STATE, ERROR_MESSAGE, ERROR_LINE) and INSERTs them before re-raising. The INSERT in a CATCH block runs in its own implicit transaction even if the outer transaction is being rolled back, so the log row is always committed.",
+        "notes": [
+          "The INSERT inside a CATCH block commits independently even if the outer transaction is rolled back — SQL Server handles this automatically.",
+          "ERROR_PROCEDURE() returns the stored procedure name where the error occurred, useful for multi-procedure call stacks.",
+          "Consider adding a HostName column using HOST_NAME() and an AppName column using APP_NAME() for richer diagnostics.",
+          "For high-volume logging, use a separate database or a queue-based pattern to avoid contention on the ErrorLog table.",
+          "Wrap the INSERT itself in a nested TRY/CATCH to prevent logging failures from masking the original error."
+        ]
+      },
+      "postgres": {
+        "code": "-- PostgreSQL: Error logging table and pattern\n\n-- Step 1: Create the error log table (run once)\nCREATE TABLE IF NOT EXISTS error_log (\n    log_id      SERIAL PRIMARY KEY,\n    sqlstate    TEXT,\n    message     TEXT,\n    detail      TEXT,\n    context     TEXT,\n    logged_at   TIMESTAMPTZ  DEFAULT NOW(),\n    username    TEXT         DEFAULT CURRENT_USER\n);\n\n-- Step 2: Use inside a DO block or function\n-- NOTE: Do NOT re-raise after INSERT — re-raising aborts the\n-- EXCEPTION handler's subtransaction and rolls back the INSERT.\nDO $$\nDECLARE\n    v_message TEXT;\n    v_detail  TEXT;\n    v_context TEXT;\nBEGIN\n    -- Simulate a business operation that fails\n    PERFORM 10 / 0;   -- division_by_zero\nEXCEPTION\n    WHEN OTHERS THEN\n        -- Capture full diagnostics\n        GET STACKED DIAGNOSTICS\n            v_message = MESSAGE_TEXT,\n            v_detail  = PG_EXCEPTION_DETAIL,\n            v_context = PG_EXCEPTION_CONTEXT;\n\n        -- Log and handle gracefully (INSERT commits in this subtransaction)\n        INSERT INTO error_log (sqlstate, message, detail, context)\n        VALUES (SQLSTATE, v_message, v_detail, v_context);\n\n        -- To also re-raise: comment out INSERT above and use a\n        -- separate autonomous-transaction workaround (e.g., dblink)\n        -- RAISE;  -- this would roll back the INSERT above\nEND;\n$$;",
+        "description": "The PostgreSQL error logging pattern creates a dedicated error_log table and uses GET STACKED DIAGNOSTICS inside an EXCEPTION handler to capture MESSAGE_TEXT, PG_EXCEPTION_DETAIL, and PG_EXCEPTION_CONTEXT. The INSERT commits in the handler's subtransaction as long as the handler exits normally. Critical difference from SQL Server: re-raising (RAISE) from the EXCEPTION block rolls back the handler's own subtransaction, so the log INSERT would be lost.",
+        "keyDifferences": [
+          "In SQL Server, the INSERT inside CATCH always commits even after THROW re-raises. In PostgreSQL, RAISE inside an EXCEPTION handler aborts the handler's subtransaction and rolls back the INSERT.",
+          "PostgreSQL GET STACKED DIAGNOSTICS provides richer context (PG_EXCEPTION_CONTEXT, schema/table/column names) than SQL Server's ERROR_* functions.",
+          "PostgreSQL has no equivalent of SQL Server ERROR_LINE() returning an exact line number in a batch — PG_EXCEPTION_CONTEXT provides a call stack instead.",
+          "For guaranteed logging plus re-raise in PostgreSQL, use dblink to log into a separate connection's transaction, or use a background worker.",
+          "PostgreSQL WHEN OTHERS catches all exceptions; SQL Server CATCH catches all errors (above severity 10)."
+        ],
+        "notes": [
+          "GET STACKED DIAGNOSTICS is available from PostgreSQL 9.2 and provides MESSAGE_TEXT, RETURNED_SQLSTATE, PG_EXCEPTION_DETAIL, PG_EXCEPTION_HINT, PG_EXCEPTION_CONTEXT, SCHEMA_NAME, TABLE_NAME, COLUMN_NAME, PG_DATATYPE_NAME, CONSTRAINT_NAME.",
+          "To log errors AND propagate them, use the dblink extension to open a second connection and INSERT in that connection's autocommit transaction.",
+          "pg_log (server log) captures all errors automatically at the server level — consider whether application-level logging duplicates what pg_log already provides.",
+          "Use CREATE TABLE IF NOT EXISTS and a SEQUENCE for log_id to make the setup idempotent in deployment scripts."
+        ]
+      },
+      "keyDifference": "SQL Server INSERT inside CATCH always commits even when THROW re-raises. PostgreSQL INSERT inside EXCEPTION handler is rolled back if RAISE re-raises — use GET STACKED DIAGNOSTICS to capture context, and dblink for guaranteed log-then-re-raise."
+    }
+  ]
+}

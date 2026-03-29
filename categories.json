@@ -1,0 +1,158 @@
+[
+  {
+    "id": "fundamentals",
+    "name": "Platform Fundamentals",
+    "icon": "\ud83c\udfd7\ufe0f",
+    "color": "#3b82f6",
+    "description": "Core concepts, installation, architecture, and version management",
+    "topics": [
+      {
+        "id": "platform-fundamentals",
+        "name": "Platform Fundamentals",
+        "file": "platform-fundamentals.json",
+        "conceptCount": 4,
+        "description": "Installation, management tools, versions, and support models",
+        "keywords": ["installation", "setup", "ide", "management", "tools", "versions", "support", "ssms", "pgadmin"]
+      },
+      {
+        "id": "docker-setup",
+        "name": "Docker Setup for PostgreSQL",
+        "file": "docker-setup.json",
+        "conceptCount": 8,
+        "description": "Complete guide to setting up PostgreSQL using Docker on Windows",
+        "keywords": ["docker", "setup", "installation", "container", "wsl2", "hyper-v", "volumes", "persistence", "pgadmin", "compose"]
+      }
+    ]
+  },
+  {
+    "id": "database",
+    "name": "Database Management",
+    "icon": "\ud83d\uddc4\ufe0f",
+    "color": "#8b5cf6",
+    "description": "Creating, configuring, and maintaining databases",
+    "topics": [
+      {
+        "id": "database-management",
+        "name": "Database Creation & Configuration",
+        "file": "database-management.json",
+        "conceptCount": 2,
+        "description": "Core database operations, creation, and configuration",
+        "keywords": ["database", "create", "configuration", "settings", "templates", "encoding", "collation"]
+      },
+      {
+        "id": "transactions_locking",
+        "name": "Transactions and Locking",
+        "file": "transactions-locking.json",
+        "conceptCount": 4,
+        "addedDate": "2026-03-26",
+        "description": "Transaction control, isolation levels, locking behavior, and deadlock handling",
+        "keywords": ["transaction", "begin", "commit", "rollback", "savepoint", "isolation level", "locking", "deadlock", "mvcc", "for update", "nolock", "blocking"]
+      }
+    ]
+  },
+  {
+    "id": "backup",
+    "name": "Backup & Recovery",
+    "icon": "\ud83d\udcbe",
+    "color": "#10b981",
+    "description": "Backup strategies, restore operations, and disaster recovery",
+    "topics": [
+      {
+        "id": "backup-recovery",
+        "name": "Backup & Recovery Strategies",
+        "file": "backup-recovery.json",
+        "conceptCount": 4,
+        "description": "Backup strategies, restore operations, and recovery models",
+        "keywords": ["backup", "restore", "recovery", "pg_dump", "wal", "transaction log", "pitr", "point in time"]
+      }
+    ]
+  },
+  {
+    "id": "security",
+    "name": "Security & Access",
+    "icon": "\ud83d\udd10",
+    "color": "#f59e0b",
+    "description": "User management, roles, permissions, and security best practices",
+    "topics": [
+      {
+        "id": "security-access-control",
+        "name": "Security & Access Control",
+        "file": "security-access-control.json",
+        "conceptCount": 2,
+        "description": "Authentication, authorization, users, roles, and security features",
+        "keywords": ["security", "authentication", "authorization", "users", "roles", "logins", "permissions", "rls"]
+      }
+    ]
+  },
+  {
+    "id": "programmability",
+    "name": "Programmability",
+    "icon": "\ud83d\udccb",
+    "color": "#3b82f6",
+    "description": "Creating and calling stored procedures, user-defined functions, and output parameters",
+    "topics": [
+      {
+        "id": "stored_procedures",
+        "name": "Stored Procedures and Functions",
+        "file": "stored-procedures.json",
+        "conceptCount": 4,
+        "description": "Creating and calling stored procedures, user-defined functions, and output parameters",
+        "keywords": ["stored procedure", "function", "create procedure", "plpgsql", "udf", "output parameters", "table-valued function", "scalar function", "return value", "programmability"]
+      },
+      {
+        "id": "error_handling",
+        "name": "Error Handling",
+        "file": "error-handling.json",
+        "conceptCount": 3,
+        "addedDate": "2026-03-27",
+        "description": "Structured error handling, custom errors, and error information functions",
+        "keywords": ["error", "try catch", "exception", "raiserror", "throw", "raise", "sqlstate", "sqlerrm", "error_message", "error logging", "begin catch", "plpgsql"]
+      }
+    ]
+  },
+  {
+    "id": "query_techniques",
+    "name": "Query Techniques",
+    "icon": "\ud83d\udccb",
+    "color": "#3b82f6",
+    "description": "Common string manipulation functions: searching, splitting, formatting, and pattern matching",
+    "topics": [
+      {
+        "id": "string_functions",
+        "name": "String Functions",
+        "file": "string-functions.json",
+        "conceptCount": 4,
+        "addedDate": "2026-03-26",
+        "description": "Common string manipulation functions: searching, splitting, formatting, and pattern matching",
+        "keywords": ["string", "charindex", "patindex", "replace", "stuff", "string_split", "string_agg", "format", "lpad", "rpad", "regexp", "overlay"]
+      },
+      {
+        "id": "window_functions",
+        "name": "Window Functions",
+        "file": "window-functions.json",
+        "conceptCount": 4,
+        "addedDate": "2026-03-26",
+        "description": "Ranking, aggregate, and value window functions with OVER, PARTITION BY, and frame specifications",
+        "keywords": ["window", "over", "partition by", "row_number", "rank", "dense_rank", "ntile", "lag", "lead", "first_value", "last_value", "running total"]
+      }
+    ]
+  },
+  {
+    "id": "performance",
+    "name": "Performance & Optimization",
+    "icon": "\ud83d\udccb",
+    "color": "#3b82f6",
+    "description": "Managing server memory allocation and parallelism settings for database instances",
+    "topics": [
+      {
+        "id": "instance_resource_configuration",
+        "name": "Instance Resource Configuration",
+        "file": "server-memory.json",
+        "conceptCount": 2,
+        "addedDate": "2026-03-27",
+        "description": "Managing server memory allocation and parallelism settings for database instances",
+        "keywords": ["memory", "sp_configure", "max server memory", "shared_buffers", "work_mem", "maxdop", "parallelism", "cost threshold", "max_parallel_workers", "performance tuning", "configuration"]
+      }
+    ]
+  }
+]

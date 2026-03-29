@@ -1,0 +1,134 @@
+{
+  "id": "transactions_locking",
+  "title": "Transactions and Locking",
+  "description": "Transaction control, isolation levels, locking behavior, and deadlock handling",
+  "concepts": [
+    {
+      "id": "transaction_control",
+      "title": "Transaction Control",
+      "sqlServer": {
+        "code": "-- Basic transaction control\nBEGIN TRANSACTION;\n\n    INSERT INTO Accounts (AccountId, Balance) VALUES (1, 1000.00);\n    UPDATE Accounts SET Balance = Balance - 100.00 WHERE AccountId = 1;\n\n    -- Check for errors before committing\n    IF @@ERROR <> 0\n    BEGIN\n        ROLLBACK TRANSACTION;\n        RETURN;\n    END\n\nCOMMIT TRANSACTION;\n\n-- Savepoint (nested transaction) example\nBEGIN TRANSACTION;\n\n    INSERT INTO Orders (OrderId, CustomerId, Amount) VALUES (101, 5, 250.00);\n\n    SAVE TRANSACTION SavePoint1;\n\n    UPDATE Inventory SET Quantity = Quantity - 1 WHERE ProductId = 42;\n\n    -- If inventory update fails, rollback only to the savepoint\n    IF @@ERROR <> 0\n    BEGIN\n        ROLLBACK TRANSACTION SavePoint1;\n    END\n\nCOMMIT TRANSACTION;",
+        "description": "SQL Server uses BEGIN TRANSACTION (or BEGIN TRAN), COMMIT TRANSACTION (or COMMIT TRAN), and ROLLBACK TRANSACTION (or ROLLBACK TRAN). Savepoints are created with SAVE TRANSACTION <name> and rolled back to with ROLLBACK TRANSACTION <name>. Note that rolling back to a savepoint does not end the transaction — a final COMMIT or ROLLBACK is still required. @@ERROR checks the error state after each statement.",
+        "notes": [
+          "BEGIN TRAN is valid shorthand for BEGIN TRANSACTION",
+          "ROLLBACK TRANSACTION <SavepointName> only rolls back to the savepoint, not the full transaction",
+          "@@ERROR is reset after every statement; use TRY/CATCH for robust error handling",
+          "SQL Server supports named transactions: BEGIN TRANSACTION MyTxn"
+        ]
+      },
+      "postgres": {
+        "code": "-- Basic transaction control\nBEGIN;\n\n    INSERT INTO accounts (account_id, balance) VALUES (1, 1000.00);\n    UPDATE accounts SET balance = balance - 100.00 WHERE account_id = 1;\n\nCOMMIT;\n\n-- Rollback example\nBEGIN;\n\n    INSERT INTO accounts (account_id, balance) VALUES (2, 500.00);\n\n    -- Something went wrong, undo everything\n    ROLLBACK;\n\n-- Savepoint example\nBEGIN;\n\n    INSERT INTO orders (order_id, customer_id, amount) VALUES (101, 5, 250.00);\n\n    SAVEPOINT savepoint1;\n\n    UPDATE inventory SET quantity = quantity - 1 WHERE product_id = 42;\n\n    -- If inventory update fails, rollback only to the savepoint\n    -- ROLLBACK TO SAVEPOINT savepoint1;\n\n    -- Release savepoint when no longer needed (optional)\n    RELEASE SAVEPOINT savepoint1;\n\nCOMMIT;",
+        "description": "PostgreSQL uses BEGIN (or BEGIN TRANSACTION / START TRANSACTION), COMMIT, and ROLLBACK. Savepoints use SAVEPOINT <name>, ROLLBACK TO SAVEPOINT <name>, and optionally RELEASE SAVEPOINT <name>. PostgreSQL's syntax is cleaner and more standard-SQL compliant. Error handling within transactions is done via the application layer or PL/pgSQL exception blocks.",
+        "keyDifferences": [
+          "PostgreSQL uses SAVEPOINT / ROLLBACK TO SAVEPOINT instead of SQL Server's SAVE TRANSACTION / ROLLBACK TRANSACTION <name>",
+          "PostgreSQL uses BEGIN or START TRANSACTION; SQL Server uses BEGIN TRANSACTION or BEGIN TRAN",
+          "PostgreSQL has RELEASE SAVEPOINT to free the savepoint without rolling back; SQL Server has no equivalent",
+          "@@ERROR checking in SQL Server is statement-level; PostgreSQL relies on PL/pgSQL EXCEPTION blocks for programmatic error handling"
+        ],
+        "notes": [
+          "START TRANSACTION is an alias for BEGIN in PostgreSQL",
+          "Rolling back to a SAVEPOINT does not end the transaction — COMMIT or ROLLBACK still required",
+          "RELEASE SAVEPOINT removes the savepoint marker but keeps all work done since then",
+          "Autonomous transactions (inner transactions independent of outer) are not supported in PostgreSQL"
+        ]
+      },
+      "keyDifference": "SQL Server uses SAVE TRANSACTION / ROLLBACK TRANSACTION <name> for savepoints; PostgreSQL uses SAVEPOINT / ROLLBACK TO SAVEPOINT — standard SQL syntax that is cleaner and more portable."
+    },
+    {
+      "id": "isolation_levels",
+      "title": "Isolation Levels",
+      "sqlServer": {
+        "code": "-- Set isolation level for the current session\nSET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\n\n-- Dirty read: can see uncommitted changes from other transactions\nBEGIN TRANSACTION;\n    SELECT AccountId, Balance FROM Accounts;\nCOMMIT TRANSACTION;\n\n-- Default isolation level (READ COMMITTED)\nSET TRANSACTION ISOLATION LEVEL READ COMMITTED;\n\n-- REPEATABLE READ: prevents non-repeatable reads\nSET TRANSACTION ISOLATION LEVEL REPEATABLE READ;\nBEGIN TRANSACTION;\n    SELECT AccountId, Balance FROM Accounts WHERE AccountId = 1;\n    -- Re-reading same row will return same data\n    SELECT AccountId, Balance FROM Accounts WHERE AccountId = 1;\nCOMMIT TRANSACTION;\n\n-- SERIALIZABLE: highest isolation, prevents phantom reads\nSET TRANSACTION ISOLATION LEVEL SERIALIZABLE;\n\n-- SNAPSHOT: row versioning, no blocking readers\n-- Requires database-level setting first:\n-- ALTER DATABASE SQLToPostgres SET ALLOW_SNAPSHOT_ISOLATION ON;\nSET TRANSACTION ISOLATION LEVEL SNAPSHOT;\nBEGIN TRANSACTION;\n    SELECT AccountId, Balance FROM Accounts;\nCOMMIT TRANSACTION;\n\n-- Check current session isolation level\nSELECT\n    CASE transaction_isolation_level\n        WHEN 1 THEN 'READ UNCOMMITTED'\n        WHEN 2 THEN 'READ COMMITTED'\n        WHEN 3 THEN 'REPEATABLE READ'\n        WHEN 4 THEN 'SERIALIZABLE'\n        WHEN 5 THEN 'SNAPSHOT'\n        ELSE 'UNKNOWN'\n    END AS IsolationLevel\nFROM sys.dm_exec_sessions\nWHERE session_id = @@SPID;",
+        "description": "SQL Server supports five isolation levels: READ UNCOMMITTED (dirty reads allowed), READ COMMITTED (default, no dirty reads), REPEATABLE READ (no non-repeatable reads), SERIALIZABLE (no phantom reads), and SNAPSHOT (row versioning, requires database configuration). Set using SET TRANSACTION ISOLATION LEVEL before starting a transaction. The level persists for the session until changed.",
+        "notes": [
+          "READ UNCOMMITTED allows dirty reads — reading uncommitted data from other transactions",
+          "SNAPSHOT isolation requires ALTER DATABASE ... SET ALLOW_SNAPSHOT_ISOLATION ON",
+          "READ COMMITTED SNAPSHOT (RCSI) is a separate database-level setting that changes how READ COMMITTED works",
+          "Isolation level can be checked via sys.dm_exec_sessions for the current session"
+        ]
+      },
+      "postgres": {
+        "code": "-- Set isolation level per transaction\nBEGIN TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;\n-- Note: PostgreSQL treats READ UNCOMMITTED as READ COMMITTED\n-- Dirty reads are impossible due to MVCC architecture\n    SELECT account_id, balance FROM accounts;\nCOMMIT;\n\n-- READ COMMITTED (default) - no dirty reads\nBEGIN TRANSACTION ISOLATION LEVEL READ COMMITTED;\n    SELECT account_id, balance FROM accounts WHERE account_id = 1;\nCOMMIT;\n\n-- REPEATABLE READ - prevents non-repeatable reads and phantom reads\nBEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ;\n    SELECT account_id, balance FROM accounts WHERE account_id = 1;\n    -- Will see a consistent snapshot from transaction start\n    SELECT account_id, balance FROM accounts WHERE account_id = 1;\nCOMMIT;\n\n-- SERIALIZABLE - full serializability via SSI (Serializable Snapshot Isolation)\nBEGIN TRANSACTION ISOLATION LEVEL SERIALIZABLE;\n    SELECT account_id, balance FROM accounts;\nCOMMIT;\n\n-- Set default isolation level for the session\nSET default_transaction_isolation TO 'repeatable read';\n\n-- Check current isolation level\nSHOW transaction_isolation;\n\n-- Reset to default\nSET default_transaction_isolation TO 'read committed';",
+        "description": "PostgreSQL supports four isolation levels via its MVCC (Multi-Version Concurrency Control) architecture: READ UNCOMMITTED (silently upgraded to READ COMMITTED), READ COMMITTED (default), REPEATABLE READ, and SERIALIZABLE. Isolation level is set per transaction using BEGIN TRANSACTION ISOLATION LEVEL <level> or SET default_transaction_isolation for the session. PostgreSQL's REPEATABLE READ also prevents phantom reads unlike the SQL standard definition.",
+        "keyDifferences": [
+          "READ UNCOMMITTED does not exist in practice in PostgreSQL — MVCC makes dirty reads impossible, so it behaves as READ COMMITTED",
+          "PostgreSQL has no SNAPSHOT isolation level — READ COMMITTED already uses MVCC snapshots by default",
+          "PostgreSQL REPEATABLE READ prevents phantom reads (stricter than the SQL standard requires)",
+          "PostgreSQL SERIALIZABLE uses SSI (Serializable Snapshot Isolation) — no blocking, but may abort transactions with serialization failures",
+          "Isolation level is set per-transaction in PostgreSQL, not per-session (though session default can be changed with SET)"
+        ],
+        "notes": [
+          "MVCC means readers never block writers and writers never block readers in PostgreSQL",
+          "Serialization failures return SQLSTATE 40001 — applications should retry these transactions",
+          "PostgreSQL's REPEATABLE READ is stronger than the SQL standard: it prevents phantom reads too",
+          "No ALLOW_SNAPSHOT_ISOLATION configuration needed — PostgreSQL always uses MVCC"
+        ]
+      },
+      "keyDifference": "PostgreSQL uses MVCC (Multi-Version Concurrency Control) making dirty reads impossible — READ UNCOMMITTED behaves as READ COMMITTED. There is no SNAPSHOT isolation level because all reads are already MVCC-based. PostgreSQL SERIALIZABLE uses non-blocking Serializable Snapshot Isolation (SSI) instead of SQL Server's lock-based approach."
+    },
+    {
+      "id": "locking_hints",
+      "title": "Locking Hints",
+      "sqlServer": {
+        "code": "-- NOLOCK: dirty read, no shared lock acquired\n-- Use with caution: can return uncommitted or phantom data\nSELECT AccountId, Balance\nFROM Accounts WITH (NOLOCK);\n\n-- UPDLOCK: acquire update lock to prevent deadlocks\n-- Use when reading before updating in same transaction\nBEGIN TRANSACTION;\n    SELECT AccountId, Balance\n    FROM Accounts WITH (UPDLOCK)\n    WHERE AccountId = 1;\n\n    UPDATE Accounts SET Balance = Balance - 100.00\n    WHERE AccountId = 1;\nCOMMIT TRANSACTION;\n\n-- HOLDLOCK: hold shared lock until transaction ends (SERIALIZABLE)\nBEGIN TRANSACTION;\n    SELECT AccountId, Balance\n    FROM Accounts WITH (HOLDLOCK)\n    WHERE AccountId = 1;\n    -- Shared lock held until COMMIT/ROLLBACK\nCOMMIT TRANSACTION;\n\n-- ROWLOCK: hint to prefer row-level locks over page/table locks\nBEGIN TRANSACTION;\n    UPDATE Accounts WITH (ROWLOCK)\n    SET Balance = Balance + 10.00\n    WHERE AccountId = 1;\nCOMMIT TRANSACTION;\n\n-- TABLOCK + HOLDLOCK: full table lock for the transaction\nBEGIN TRANSACTION;\n    SELECT COUNT(*) FROM Accounts WITH (TABLOCK, HOLDLOCK);\nCOMMIT TRANSACTION;",
+        "description": "SQL Server supports table hints that override the query optimizer's default locking strategy. WITH (NOLOCK) is commonly used to avoid blocking on reads but risks dirty reads. WITH (UPDLOCK) is used to prevent deadlocks when a SELECT will be followed by an UPDATE. WITH (HOLDLOCK) escalates to a serializable lock. WITH (ROWLOCK) requests row-level granularity. Hints are applied per-table in the FROM clause.",
+        "notes": [
+          "WITH (NOLOCK) is equivalent to READUNCOMMITTED and can return uncommitted, rolled-back, or duplicate rows",
+          "WITH (UPDLOCK) is the recommended pattern for read-then-update operations to prevent deadlocks",
+          "WITH (HOLDLOCK) is equivalent to WITH (SERIALIZABLE) for that specific table",
+          "Lock hints are hints — SQL Server may escalate locks regardless"
+        ]
+      },
+      "postgres": {
+        "code": "-- FOR UPDATE: exclusive row lock (equivalent to UPDLOCK)\n-- Prevents other transactions from locking or modifying these rows\nBEGIN;\n    SELECT account_id, balance\n    FROM accounts\n    WHERE account_id = 1\n    FOR UPDATE;\n\n    UPDATE accounts SET balance = balance - 100.00\n    WHERE account_id = 1;\nCOMMIT;\n\n-- FOR SHARE: shared lock — prevents modification but allows other shared locks\nBEGIN;\n    SELECT account_id, balance\n    FROM accounts\n    WHERE account_id = 1\n    FOR SHARE;\nCOMMIT;\n\n-- FOR NO KEY UPDATE: weaker exclusive lock\n-- Allows other transactions to acquire FOR KEY SHARE locks (for FK checks)\nBEGIN;\n    SELECT account_id, balance\n    FROM accounts\n    WHERE account_id = 1\n    FOR NO KEY UPDATE;\nCOMMIT;\n\n-- FOR UPDATE SKIP LOCKED: skip rows locked by other transactions\n-- Useful for queue processing patterns\nBEGIN;\n    SELECT account_id, balance\n    FROM accounts\n    WHERE account_id = 1\n    FOR UPDATE SKIP LOCKED;\nCOMMIT;\n\n-- FOR UPDATE NOWAIT: fail immediately if rows are locked (no waiting)\nBEGIN;\n    SELECT account_id, balance\n    FROM accounts\n    WHERE account_id = 1\n    FOR UPDATE NOWAIT;\nCOMMIT;\n\n-- Note: No direct NOLOCK equivalent\n-- PostgreSQL's default READ COMMITTED uses MVCC\n-- Readers never see uncommitted data and never block writers",
+        "description": "PostgreSQL provides row-level locking through SELECT ... FOR UPDATE, FOR SHARE, FOR NO KEY UPDATE, and FOR KEY SHARE clauses. These are applied in the SELECT statement's locking clause, not as table hints. FOR UPDATE is the most common — it prevents other transactions from locking or modifying selected rows. SKIP LOCKED and NOWAIT modifiers control behavior when rows are already locked. There is no NOLOCK equivalent because PostgreSQL's MVCC architecture eliminates dirty reads without needing a lock hint.",
+        "keyDifferences": [
+          "No WITH (NOLOCK) equivalent — PostgreSQL MVCC means readers never see uncommitted data without any hint needed",
+          "Locking clauses are part of the SELECT statement (FOR UPDATE / FOR SHARE), not table hints",
+          "PostgreSQL adds SKIP LOCKED and NOWAIT modifiers not available in SQL Server table hints",
+          "FOR NO KEY UPDATE and FOR KEY SHARE are PostgreSQL-specific granular lock modes for FK-safe locking",
+          "PostgreSQL has no page-level or table-level lock hints in SELECT — use LOCK TABLE for explicit table locks"
+        ],
+        "notes": [
+          "SKIP LOCKED is excellent for implementing job queues — each worker grabs unlocked rows",
+          "NOWAIT raises an error immediately instead of waiting for locked rows",
+          "FOR KEY SHARE is acquired automatically by FK constraint checks — use FOR NO KEY UPDATE to avoid blocking FK lookups",
+          "LOCK TABLE accounts IN SHARE ROW EXCLUSIVE MODE provides table-level locking in PostgreSQL"
+        ]
+      },
+      "keyDifference": "SQL Server's WITH (NOLOCK) hint has no PostgreSQL equivalent — MVCC makes dirty reads impossible by design, so no hint is needed. PostgreSQL uses SELECT ... FOR UPDATE/FOR SHARE locking clauses instead of table hints, and adds powerful SKIP LOCKED and NOWAIT options for queue processing patterns."
+    },
+    {
+      "id": "deadlock_handling",
+      "title": "Deadlock Detection and Handling",
+      "sqlServer": {
+        "code": "-- Deadlock retry pattern using TRY/CATCH\n-- SQL Server error 1205 = transaction chosen as deadlock victim\n\nDECLARE @RetryCount INT = 0;\nDECLARE @MaxRetries INT = 3;\nDECLARE @Success BIT = 0;\n\nWHILE @RetryCount < @MaxRetries AND @Success = 0\nBEGIN\n    BEGIN TRY\n        BEGIN TRANSACTION;\n            UPDATE Accounts SET Balance = Balance - 10.00 WHERE AccountId = 1;\n        COMMIT TRANSACTION;\n        SET @Success = 1;\n    END TRY\n    BEGIN CATCH\n        IF @@TRANCOUNT > 0\n            ROLLBACK TRANSACTION;\n\n        IF ERROR_NUMBER() = 1205  -- Deadlock victim\n        BEGIN\n            SET @RetryCount = @RetryCount + 1;\n            WAITFOR DELAY '00:00:00.100';  -- Wait 100ms before retry\n        END\n        ELSE\n        BEGIN\n            -- Re-raise non-deadlock errors\n            THROW;\n        END\n    END CATCH\nEND;\n\n-- Query active blocking sessions\nSELECT\n    r.session_id,\n    r.blocking_session_id,\n    r.wait_type,\n    r.wait_time,\n    r.status,\n    t.text AS query_text\nFROM sys.dm_exec_requests r\nCROSS APPLY sys.dm_exec_sql_text(r.sql_handle) t\nWHERE r.blocking_session_id > 0;",
+        "description": "SQL Server automatically detects deadlocks and chooses one transaction as the 'deadlock victim', rolling it back and raising error 1205. Applications should catch error 1205 in a BEGIN CATCH block and implement retry logic. The DEADLOCK_PRIORITY setting can influence which transaction becomes the victim. Use sys.dm_exec_requests to monitor blocking sessions.",
+        "notes": [
+          "SQL Server's deadlock monitor runs every 5 seconds by default (configurable)",
+          "Use SET DEADLOCK_PRIORITY LOW to make your session the preferred deadlock victim",
+          "Deadlock graphs can be captured via Extended Events or SQL Server Profiler",
+          "@@TRANCOUNT must be checked before ROLLBACK in CATCH blocks — nested transactions affect this count"
+        ]
+      },
+      "postgres": {
+        "code": "-- PostgreSQL deadlock retry pattern using PL/pgSQL\n-- SQLSTATE 40P01 = deadlock detected\n\nDO $$\nDECLARE\n    v_retry_count INT := 0;\n    v_max_retries INT := 3;\n    v_success BOOLEAN := FALSE;\nBEGIN\n    WHILE v_retry_count < v_max_retries AND NOT v_success LOOP\n        BEGIN\n            UPDATE accounts SET balance = balance - 10.00 WHERE account_id = 1;\n            v_success := TRUE;\n        EXCEPTION\n            WHEN deadlock_detected THEN  -- SQLSTATE 40P01\n                v_retry_count := v_retry_count + 1;\n                PERFORM pg_sleep(0.1);  -- Wait 100ms before retry\n            WHEN OTHERS THEN\n                RAISE;  -- Re-raise non-deadlock errors\n        END;\n    END LOOP;\nEND;\n$$;\n\n-- Query active connections and blocking info\nSELECT\n    pid,\n    usename,\n    application_name,\n    state,\n    wait_event_type,\n    wait_event,\n    LEFT(query, 100) AS query_snippet\nFROM pg_stat_activity\nWHERE state != 'idle'\nORDER BY pid;\n\n-- Find blocking locks\nSELECT\n    blocked.pid AS blocked_pid,\n    blocking.pid AS blocking_pid,\n    blocked.query AS blocked_query,\n    blocking.query AS blocking_query\nFROM pg_stat_activity blocked\nJOIN pg_stat_activity blocking\n    ON blocking.pid = ANY(pg_blocking_pids(blocked.pid))\nWHERE cardinality(pg_blocking_pids(blocked.pid)) > 0;",
+        "description": "PostgreSQL automatically detects deadlocks and aborts one of the involved transactions, raising SQLSTATE 40P01 (deadlock_detected). Retry logic is implemented in PL/pgSQL using an EXCEPTION WHEN deadlock_detected block. In application code, check for SQLSTATE 40P01 and retry the transaction. Use pg_stat_activity and pg_blocking_pids() to monitor blocking. Unlike SQL Server, PostgreSQL has no DEADLOCK_PRIORITY setting — the victim is chosen by internal heuristics.",
+        "keyDifferences": [
+          "PostgreSQL uses SQLSTATE 40P01 (deadlock_detected) instead of SQL Server error number 1205",
+          "Retry logic in PostgreSQL uses PL/pgSQL EXCEPTION WHEN deadlock_detected blocks, not TRY/CATCH",
+          "pg_stat_activity + pg_blocking_pids() replaces sys.dm_exec_requests for monitoring blocking",
+          "PostgreSQL has no DEADLOCK_PRIORITY setting — deadlock victim selection is automatic",
+          "In PostgreSQL, a deadlock aborts only the current transaction; the connection remains open unlike some errors"
+        ],
+        "notes": [
+          "SQLSTATE 40001 (serialization_failure) is also retriable — occurs with SERIALIZABLE isolation level",
+          "Applications should implement retry logic at the connection layer, not just in stored procedures",
+          "deadlock_timeout GUC parameter controls how long PostgreSQL waits before checking for deadlocks (default 1s)",
+          "pg_blocking_pids(pid) returns an array of PIDs blocking the given session — useful for lock monitoring"
+        ]
+      },
+      "keyDifference": "SQL Server raises error number 1205 caught via ERROR_NUMBER() in BEGIN CATCH; PostgreSQL raises SQLSTATE 40P01 (deadlock_detected) caught via EXCEPTION WHEN deadlock_detected in PL/pgSQL. Monitor blocking with sys.dm_exec_requests (SQL Server) vs pg_stat_activity + pg_blocking_pids() (PostgreSQL)."
+    }
+  ]
+}
